@@ -50,6 +50,8 @@ export function AppTopbar({ concepts }: AppTopbarProps) {
         <span title="Sei">✓ {stats.know}</span>
         <span className="app-counts-sep">·</span>
         <span title="Revisar">⟳ {stats.review}</span>
+        <span className="app-counts-sep">·</span>
+        <span title="Total">{concepts.length}</span>
       </div>
 
       <button className="app-icon-btn" title="Tema" onClick={toggleTheme}>

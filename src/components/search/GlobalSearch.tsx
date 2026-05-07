@@ -14,7 +14,17 @@ interface SearchResult {
 }
 
 function searchAll(query: string, concepts: Concept[], glossary: GlossaryItem[]): SearchResult[] {
-  if (!query.trim()) return []
+  if (!query.trim()) {
+    return concepts.slice(0, 8).map(c => ({
+      type: 'concept' as const,
+      href: `/concepts/${c.id}`,
+      emoji: c.emoji,
+      title: c.title,
+      subtitle: c.summary,
+      tag: c.level,
+      tagColor: c.color,
+    }))
+  }
   const q = query.toLowerCase()
 
   const conceptResults: SearchResult[] = concepts
@@ -125,7 +135,7 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
 
   return (
     <div className="search-overlay">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} />
+      <div style={{ position: 'absolute', inset: 0 }} onClick={close} />
       <div className="search-modal">
         <div className="search-input-row">
           <span style={{ fontSize: '1.125rem' }}>🔍</span>
@@ -135,13 +145,14 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
             onChange={e => { setQuery(e.target.value); setSelected(0) }}
             onKeyDown={handleKeyDown}
             placeholder="Buscar conceitos, hooks, patterns, termos..."
-            className="search-input"
+            style={{ flex: 1, font: 'inherit', fontSize: 15, background: 'transparent', border: 0, color: 'var(--fg)', outline: 'none' }}
           />
           <kbd>ESC</kbd>
         </div>
 
         {results.length > 0 && (
           <div className="search-results">
+            <div className="search-section-lbl">{!query ? 'Conceitos' : 'Resultados'}</div>
             {results.map((r, i) => (
               <button
                 key={r.href}

@@ -11,13 +11,59 @@ const DOMAIN_HUES: Record<string, number> = {
   'Next.js': 190, 'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
 }
 
-function highlight(code: string) {
-  return code
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/(\/\/[^\n]*)/g, '<span class="cc">$1</span>')
-    .replace(/('[^']*'|"[^"]*"|`[^`]*`)/g, '<span class="cs">$1</span>')
-    .replace(/\b(const|let|var|function|return|async|await|if|else|export|import|from|new|use(?:State|Effect|Memo|Callback|Ref|Transition|Reducer|Context|Id|LayoutEffect))\b/g, '<span class="ck">$1</span>')
-    .replace(/\b(useDebounce|useTransition|useFormStatus|useActionState)\b/g, '<span class="cf">$1</span>')
+function highlight(code: string): string {
+  // Tokenize into segments to avoid reprocessing spans
+  type Token = { kind: 'comment' | 'string' | 'keyword' | 'func' | 'raw'; text: string }
+  const tokens: Token[] = []
+  const src = code
+  let i = 0
+
+  while (i < src.length) {
+    // Line comment
+    if (src[i] === '/' && src[i + 1] === '/') {
+      const end = src.indexOf('\n', i)
+      const t = end === -1 ? src.slice(i) : src.slice(i, end)
+      tokens.push({ kind: 'comment', text: t })
+      i += t.length
+      continue
+    }
+    // String literals
+    if (src[i] === '"' || src[i] === "'" || src[i] === '`') {
+      const q = src[i]
+      let j = i + 1
+      while (j < src.length && src[j] !== q) {
+        if (src[j] === '\\') j++
+        j++
+      }
+      tokens.push({ kind: 'string', text: src.slice(i, j + 1) })
+      i = j + 1
+      continue
+    }
+    // Collect raw text until next special char
+    const next = src.slice(i).search(/\/\/|["'`]/)
+    if (next === -1) {
+      tokens.push({ kind: 'raw', text: src.slice(i) })
+      break
+    }
+    tokens.push({ kind: 'raw', text: src.slice(i, i + next) })
+    i += next
+  }
+
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  const KW = /\b(const|let|var|function|return|async|await|if|else|export|import|from|new|use(?:State|Effect|Memo|Callback|Ref|Transition|Reducer|Context|Id|LayoutEffect))\b/g
+  const FN = /\b(useDebounce|useTransition|useFormStatus|useActionState)\b/g
+
+  return tokens.map(({ kind, text }) => {
+    if (kind === 'comment') return `<span class="cc">${esc(text)}</span>`
+    if (kind === 'string')  return `<span class="cs">${esc(text)}</span>`
+    if (kind === 'raw') {
+      return esc(text)
+        .replace(KW, '<span class="ck">$1</span>')
+        .replace(FN, '<span class="cf">$1</span>')
+    }
+    return esc(text)
+  }).join('')
 }
 
 interface Props {
