@@ -115,48 +115,47 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
   if (!open) return (
     <button
       onClick={() => setOpen(true)}
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-3 py-2 bg-surface border border-border rounded-xl text-[11px] text-muted hover:border-accent hover:text-accent transition-all shadow-lg"
+      className="app-searchbar"
+      style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}
     >
       🔍 <span>Busca global</span>
-      <kbd className="text-[9px] px-1.5 py-0.5 bg-surface2 border border-border rounded font-mono">⌘K</kbd>
+      <kbd>⌘K</kbd>
     </button>
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
+    <div className="search-overlay">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} />
-      <div className="relative w-full max-w-2xl mx-4 bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
-          <span className="text-muted text-lg">🔍</span>
+      <div className="search-modal">
+        <div className="search-input-row">
+          <span style={{ fontSize: '1.125rem' }}>🔍</span>
           <input
             ref={inputRef}
             value={query}
             onChange={e => { setQuery(e.target.value); setSelected(0) }}
             onKeyDown={handleKeyDown}
             placeholder="Buscar conceitos, hooks, patterns, termos..."
-            className="flex-1 bg-transparent text-text text-[14px] placeholder-muted outline-none font-mono"
+            className="search-input"
           />
-          <kbd className="text-[10px] px-1.5 py-0.5 bg-surface2 border border-border rounded text-muted font-mono">ESC</kbd>
+          <kbd>ESC</kbd>
         </div>
 
         {results.length > 0 && (
-          <div className="max-h-[400px] overflow-y-auto scrollbar-thin py-2">
+          <div className="search-results">
             {results.map((r, i) => (
               <button
                 key={r.href}
                 onClick={() => navigate(r.href)}
                 onMouseEnter={() => setSelected(i)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  selected === i ? 'bg-surface2' : ''
-                }`}
+                className={'search-result' + (selected === i ? ' active' : '')}
               >
-                <span className="text-xl flex-shrink-0">{r.emoji}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[13px] text-white truncate">{r.title}</div>
-                  <div className="text-[11px] text-muted truncate mt-0.5">{r.subtitle}</div>
+                <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{r.emoji}</span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--fg-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{r.subtitle}</div>
                 </div>
                 <span
-                  className="text-[9px] px-2 py-0.5 rounded-full flex-shrink-0 uppercase tracking-[1px] font-bold"
+                  className="search-result-where"
                   style={{ color: r.tagColor, backgroundColor: `${r.tagColor}18` }}
                 >
                   {r.tag}
@@ -167,13 +166,13 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
         )}
 
         {query && results.length === 0 && (
-          <div className="px-4 py-8 text-center text-muted text-[13px]">
+          <div className="search-empty">
             Nenhum resultado para &quot;{query}&quot;
           </div>
         )}
 
         {!query && (
-          <div className="px-4 py-4 text-[11px] text-muted flex gap-4">
+          <div style={{ padding: '16px', fontSize: 11, color: 'var(--fg-muted)', display: 'flex', gap: 16 }}>
             <span>↑↓ navegar</span>
             <span>↵ abrir</span>
             <span>ESC fechar</span>

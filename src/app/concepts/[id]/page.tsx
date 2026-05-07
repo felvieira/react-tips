@@ -17,13 +17,15 @@ export default async function ConceptPage({ params }: { params: Promise<{ id: st
   const relatedTerms = getRelatedTerms(concept)
 
   return (
-    <ConceptPageClient
-      concept={concept}
-      prev={all[idx - 1]?.id ?? null}
-      next={all[idx + 1]?.id ?? null}
-      current={idx + 1}
-      total={all.length}
-      relatedTerms={relatedTerms}
-    />
+    <div className="app-content">
+      <ConceptPageClient
+        concept={concept}
+        prev={all[idx - 1]?.id ?? null}
+        next={all[idx + 1]?.id ?? null}
+        current={idx + 1}
+        total={all.length}
+        relatedTerms={relatedTerms}
+      />
+    </div>
   )
 }

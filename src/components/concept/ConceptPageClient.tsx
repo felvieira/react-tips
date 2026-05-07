@@ -1,18 +1,26 @@
 'use client'
 import { useState } from 'react'
-import { ConceptHero } from './ConceptHero'
-import { DefinitionBlock } from './DefinitionBlock'
-import { SectionGrid } from './SectionGrid'
-import { TipBlock } from './TipBlock'
-import { QuestionAccordion } from './QuestionAccordion'
-import { CodeBlock } from '@/components/ui/CodeBlock'
-import { NavArrows } from './NavArrows'
-import { ProgressButtons } from './ProgressButtons'
-import { FlashcardMode } from './FlashcardMode'
-import { RelatedTerms } from './RelatedTerms'
+import { useRouter } from 'next/navigation'
+import { useProgress } from '@/hooks/useProgress'
+import { getRelatedTerms } from '@/lib/loaders'
 import type { Concept, GlossaryItem } from '@/lib/schemas'
 
-interface ConceptPageClientProps {
+const DOMAIN_HUES: Record<string, number> = {
+  'Performance': 150, 'React 18': 220, 'Next.js RSC': 190,
+  'Padrão': 280, 'Segurança': 0, 'Hooks': 250,
+  'Next.js': 190, 'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
+}
+
+function highlight(code: string) {
+  return code
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/(\/\/[^\n]*)/g, '<span class="cc">$1</span>')
+    .replace(/('[^']*'|"[^"]*"|`[^`]*`)/g, '<span class="cs">$1</span>')
+    .replace(/\b(const|let|var|function|return|async|await|if|else|export|import|from|new|use(?:State|Effect|Memo|Callback|Ref|Transition|Reducer|Context|Id|LayoutEffect))\b/g, '<span class="ck">$1</span>')
+    .replace(/\b(useDebounce|useTransition|useFormStatus|useActionState)\b/g, '<span class="cf">$1</span>')
+}
+
+interface Props {
   concept: Concept
   prev: number | null
   next: number | null
@@ -21,40 +29,180 @@ interface ConceptPageClientProps {
   relatedTerms: GlossaryItem[]
 }
 
-export function ConceptPageClient({ concept, prev, next, current, total, relatedTerms }: ConceptPageClientProps) {
+export function ConceptPageClient({ concept, prev, next, current, total, relatedTerms }: Props) {
+  const router = useRouter()
+  const { getStatus, setStatus } = useProgress()
   const [flashcard, setFlashcard] = useState(false)
+  const [revealed, setRevealed] = useState(false)
+  const status = getStatus(concept.id)
+  const hue = DOMAIN_HUES[concept.level] ?? 220
 
-  const sections = [
-    { label: 'Problema', icon: '🔴', color: '#f87171', text: concept.problem },
-    { label: 'Solução', icon: '✅', color: '#4ade80', text: concept.solution },
-  ]
-
-  if (flashcard) {
-    return <FlashcardMode concept={concept} onExit={() => setFlashcard(false)} />
-  }
+  // Reset flashcard state when concept changes
+  useState(() => { setRevealed(false) })
 
   return (
-    <div>
-      <ConceptHero concept={concept}>
-        <div className="flex items-center gap-2 mt-4">
-          <ProgressButtons conceptId={concept.id} />
-          <button
-            onClick={() => setFlashcard(true)}
-            className="px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-[1px] border border-border text-muted hover:border-accent hover:text-accent transition-all"
-          >
-            ⚡ Flashcard
-          </button>
-        </div>
-      </ConceptHero>
-      <div className="px-6 md:px-9 pb-9 max-w-3xl">
-        <DefinitionBlock text={concept.definition} />
-        <SectionGrid items={sections} />
-        <TipBlock text={concept.tip} />
-        <QuestionAccordion questions={concept.questions} />
-        <CodeBlock code={concept.code} />
-        <RelatedTerms terms={relatedTerms} />
-        <NavArrows prevId={prev} nextId={next} current={current} total={total} />
+    <div className="content-inner">
+      {/* Meta */}
+      <div className="concept-meta">
+        <span className="domain-pill" style={{ '--h': hue } as React.CSSProperties}>
+          <span className="pdot" />{concept.level}
+        </span>
       </div>
+
+      {/* Title */}
+      <h1 className="concept-h1">{concept.title}</h1>
+      <p className="concept-lead">{concept.summary}</p>
+
+      {/* Actions */}
+      <div className="concept-actions">
+        <button
+          className={'concept-btn know' + (status === 'know' ? ' active' : '')}
+          onClick={() => setStatus(concept.id, status === 'know' ? 'unseen' : 'know')}
+        >✓ Sei</button>
+        <button
+          className={'concept-btn review' + (status === 'review' ? ' active' : '')}
+          onClick={() => setStatus(concept.id, status === 'review' ? 'unseen' : 'review')}
+        >⟳ Revisar</button>
+        <button
+          className={'concept-btn flash' + (flashcard ? ' active' : '')}
+          onClick={() => { setFlashcard(f => !f); setRevealed(false) }}
+        >⚡ Flashcard</button>
+      </div>
+
+      {/* Flashcard curtain */}
+      {flashcard && !revealed && (
+        <div className="concept-section">
+          <div className="flashcard-curtain" onClick={() => setRevealed(true)}>
+            <div className="flashcard-curtain-label">⚡ Flashcard</div>
+            <div className="flashcard-curtain-hint">Pense na resposta — clique para revelar definição, problema, solução e dica.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Content (shown when not in flashcard mode, or when revealed) */}
+      {(!flashcard || revealed) && (
+        <>
+          {/* Definition */}
+          <div className="concept-section">
+            <div className="concept-section-label">Definição</div>
+            <p>{concept.definition}</p>
+          </div>
+
+          {/* Problem → Solution */}
+          {concept.problem && (
+            <div className="concept-section">
+              <div className="concept-section-label">Problema → Solução</div>
+              <div className="callout problem">
+                <div className="callout-label">Problema</div>
+                {concept.problem}
+              </div>
+              <div style={{ height: 8 }} />
+              <div className="callout solution">
+                <div className="callout-label">Solução</div>
+                {concept.solution}
+              </div>
+            </div>
+          )}
+
+          {/* Tip */}
+          {concept.tip && (
+            <div className="concept-section">
+              <div className="concept-section-label">Dica de entrevista</div>
+              <div className="callout tip">
+                <div className="callout-label">Tip</div>
+                {concept.tip}
+              </div>
+            </div>
+          )}
+
+          {/* Code */}
+          {concept.code && (
+            <div className="concept-section">
+              <div className="concept-section-label">Código</div>
+              <pre className="concept-code">
+                <code dangerouslySetInnerHTML={{ __html: highlight(concept.code) }} />
+              </pre>
+            </div>
+          )}
+
+          {/* Interview Q&A */}
+          {concept.questions && concept.questions.length > 0 && (
+            <div className="concept-section">
+              <div className="concept-section-label">Perguntas de entrevista</div>
+              {concept.questions.map((q, i) => (
+                <QABlock key={i} q={q.q} a={q.a} />
+              ))}
+            </div>
+          )}
+
+          {/* Related glossary terms */}
+          {relatedTerms.length > 0 && (
+            <div className="concept-section">
+              <div className="concept-section-label">Termos relacionados</div>
+              <div className="related-grid">
+                {relatedTerms.map(t => (
+                  <span key={t.term} className="related-chip" title={t.def}
+                    onClick={() => router.push(`/glossary/${encodeURIComponent(t.term)}`)}>
+                    {t.term}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Nav arrows */}
+      <NavRow prev={prev} next={next} current={current} total={total} />
+    </div>
+  )
+}
+
+function QABlock({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="qa-block" style={{ marginBottom: 8 }}>
+      <div className="qa-q" onClick={() => setOpen(o => !o)}>
+        <span className="qa-q-prefix">Q.</span>
+        <span style={{ flex: 1 }}>{q}</span>
+        <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>{open ? '▲' : '▾'}</span>
+      </div>
+      {open && (
+        <div className="qa-a">
+          <span className="qa-a-prefix">A.</span>{a}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NavRow({ prev, next, current, total }: { prev: number | null; next: number | null; current: number; total: number }) {
+  const router = useRouter()
+  return (
+    <div style={{ display: 'flex', gap: 8, marginTop: 40, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+      <button
+        onClick={() => prev && router.push(`/concepts/${prev}`)}
+        disabled={!prev}
+        style={{
+          flex: 1, padding: '8px 12px', border: '1px solid var(--border)',
+          borderRadius: 6, background: 'var(--bg-elev)', color: 'var(--fg-muted)',
+          fontSize: 12, cursor: prev ? 'pointer' : 'default', opacity: prev ? 1 : 0.3,
+          fontFamily: 'var(--font-mono)',
+        }}
+      >← Anterior</button>
+      <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+        {current}/{total}
+      </span>
+      <button
+        onClick={() => next && router.push(`/concepts/${next}`)}
+        disabled={!next}
+        style={{
+          flex: 1, padding: '8px 12px', border: '1px solid var(--border)',
+          borderRadius: 6, background: 'var(--bg-elev)', color: 'var(--fg-muted)',
+          fontSize: 12, cursor: next ? 'pointer' : 'default', opacity: next ? 1 : 0.3,
+          fontFamily: 'var(--font-mono)',
+        }}
+      >Próximo →</button>
     </div>
   )
 }
