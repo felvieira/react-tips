@@ -143,6 +143,13 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
           <span>Outros</span>
         </div>
         <div
+          className={'sidebar-row' + (pathname === '/questions' ? ' active' : '')}
+          onClick={() => router.push('/questions')}
+        >
+          <span className="status-dot" />
+          <span className="sidebar-row-label">Todas as perguntas</span>
+        </div>
+        <div
           className={'sidebar-row' + (pathname === '/glossary' ? ' active' : '')}
           onClick={() => router.push('/glossary')}
         >
