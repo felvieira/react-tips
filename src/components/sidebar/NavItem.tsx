@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import type { ProgressStatus } from '@/hooks/useProgress'
 
 interface NavItemProps {
   href: string
@@ -8,9 +9,15 @@ interface NavItemProps {
   tagColor: string
   index: number
   active: boolean
+  status?: ProgressStatus
 }
 
-export function NavItem({ href, emoji, title, tag, tagColor, index, active }: NavItemProps) {
+const STATUS_DOT: Record<string, string> = {
+  know:   'bg-green-400',
+  review: 'bg-yellow-400',
+}
+
+export function NavItem({ href, emoji, title, tag, tagColor, index, active, status }: NavItemProps) {
   return (
     <Link
       href={href}
@@ -28,7 +35,12 @@ export function NavItem({ href, emoji, title, tag, tagColor, index, active }: Na
           {tag}
         </span>
       </div>
-      {index > 0 && <span className="text-[10px] text-muted flex-shrink-0">{index}</span>}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {status && STATUS_DOT[status] && (
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[status]}`} />
+        )}
+        {index > 0 && <span className="text-[10px] text-muted">{index}</span>}
+      </div>
     </Link>
   )
 }

@@ -6,6 +6,7 @@ import { SearchBox } from './SearchBox'
 import { FilterBar } from './FilterBar'
 import { NavItem } from './NavItem'
 import type { Concept, GlossaryItem } from '@/lib/schemas'
+import { useProgress } from '@/hooks/useProgress'
 
 interface SidebarProps {
   concepts: Concept[]
@@ -15,6 +16,7 @@ interface SidebarProps {
 
 export function Sidebar({ concepts, glossary, levels }: SidebarProps) {
   const pathname = usePathname()
+  const { getStatus } = useProgress()
   const isGlossary = pathname.startsWith('/glossary')
 
   const [conceptSearch, setConceptSearch] = useState('')
@@ -67,6 +69,7 @@ export function Sidebar({ concepts, glossary, levels }: SidebarProps) {
                 tagColor={c.color}
                 index={i + 1}
                 active={pathname === `/concepts/${c.id}`}
+                status={getStatus(c.id)}
               />
             ))}
           </div>
