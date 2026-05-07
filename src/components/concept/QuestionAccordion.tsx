@@ -17,12 +17,12 @@ export function QuestionAccordion({ questions }: { questions: Question[] }) {
             className="w-full flex items-start gap-3 px-[18px] py-3.5 text-left hover:bg-surface2 transition-colors"
           >
             <span className="text-accent font-bold flex-shrink-0 text-sm">Q</span>
-            <span className="flex-1 text-[13px] text-text leading-relaxed">{q.q}</span>
+            <span className="flex-1 text-[14px] text-text leading-relaxed">{q.q}</span>
             <span className={`text-muted flex-shrink-0 transition-transform ${open === i ? 'rotate-180 text-accent' : ''}`}>▾</span>
           </button>
           {open === i && (
-            <div className="px-[18px] pb-4 pl-[50px]">
-              <p className="text-[13px] text-[#8aaccc] leading-relaxed border-l-2 border-accent pl-3.5">{q.a}</p>
+            <div className="px-[18px] pb-5 pl-[50px]">
+              <p className="text-[14px] text-[#8aaccc] leading-[1.8] border-l-2 border-accent pl-4">{q.a}</p>
             </div>
           )}
         </div>

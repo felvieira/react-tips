@@ -17,7 +17,7 @@ export function ConceptHero({ concept, children }: ConceptHeroProps) {
           <h2 className="font-display text-2xl text-white leading-tight">{concept.title}</h2>
         </div>
       </div>
-      <p className="text-[13px] text-[#7a9cc0] leading-relaxed max-w-2xl">{concept.summary}</p>
+      <p className="text-[14px] text-[#7a9cc0] leading-[1.8] max-w-2xl">{concept.summary}</p>
       {children}
     </div>
   )

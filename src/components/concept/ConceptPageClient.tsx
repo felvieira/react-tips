@@ -46,7 +46,7 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
           </button>
         </div>
       </ConceptHero>
-      <div className="px-9 pb-9">
+      <div className="px-6 md:px-9 pb-9 max-w-3xl">
         <DefinitionBlock text={concept.definition} />
         <SectionGrid items={sections} />
         <TipBlock text={concept.tip} />

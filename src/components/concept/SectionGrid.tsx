@@ -10,14 +10,11 @@ interface SectionItem {
 
 export function SectionGrid({ items }: { items: SectionItem[] }) {
   return (
-    <div className="grid grid-cols-2 gap-4 mt-4">
-      {items.map(({ label, icon, color, text, full }) => (
-        <div
-          key={label}
-          className={`bg-surface border border-border rounded-xl px-5 py-4 ${full ? 'col-span-2' : ''}`}
-        >
+    <div className="flex flex-col gap-3 mt-4">
+      {items.map(({ label, icon, color, text }) => (
+        <div key={label} className="bg-surface border border-border rounded-xl px-5 py-4">
           <SectionLabel color={color}>{icon} {label}</SectionLabel>
-          <p className="text-[13px] text-[#8aaccc] leading-relaxed">{text}</p>
+          <p className="text-[14px] text-[#8aaccc] leading-[1.8]">{text}</p>
         </div>
       ))}
     </div>

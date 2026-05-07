@@ -44,25 +44,23 @@ export function FlashcardMode({ concept, onExit }: FlashcardModeProps) {
           </button>
         ) : (
           <div className="w-full space-y-4">
-            <div className="bg-surface border-l-[3px] border-accent rounded-md px-5 py-4">
-              <div className="text-[10px] text-accent uppercase tracking-[2px] font-bold mb-2">Definição</div>
-              <p className="text-[13px] text-[#b8d0e8] leading-relaxed">{concept.definition}</p>
+            <div className="bg-surface border-l-[3px] border-accent rounded-md px-5 py-5">
+              <div className="text-[10px] text-accent uppercase tracking-[2px] font-bold mb-3">Definição</div>
+              <p className="text-[14px] text-[#b8d0e8] leading-[1.8]">{concept.definition}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-surface border border-border rounded-xl px-5 py-4">
-                <div className="text-[10px] text-[#f87171] uppercase tracking-[2px] font-bold mb-2">🔴 Problema</div>
-                <p className="text-[13px] text-[#8aaccc] leading-relaxed">{concept.problem}</p>
-              </div>
-              <div className="bg-surface border border-border rounded-xl px-5 py-4">
-                <div className="text-[10px] text-[#4ade80] uppercase tracking-[2px] font-bold mb-2">✅ Solução</div>
-                <p className="text-[13px] text-[#8aaccc] leading-relaxed">{concept.solution}</p>
-              </div>
+            <div className="bg-surface border border-border rounded-xl px-5 py-4">
+              <div className="text-[10px] text-[#f87171] uppercase tracking-[2px] font-bold mb-3">🔴 Problema</div>
+              <p className="text-[14px] text-[#8aaccc] leading-[1.8]">{concept.problem}</p>
+            </div>
+            <div className="bg-surface border border-border rounded-xl px-5 py-4">
+              <div className="text-[10px] text-[#4ade80] uppercase tracking-[2px] font-bold mb-3">✅ Solução</div>
+              <p className="text-[14px] text-[#8aaccc] leading-[1.8]">{concept.solution}</p>
             </div>
 
-            <div className="rounded-xl px-4 py-3.5 border border-[#854d0e] bg-[#1c0f03]">
-              <div className="text-[10px] text-[#fbbf24] uppercase tracking-[2px] font-bold mb-1.5">💡 Dica Senior</div>
-              <p className="text-[13px] text-[#d97706] leading-relaxed">{concept.tip}</p>
+            <div className="rounded-xl px-5 py-5 border border-[#854d0e] bg-[#1c0f03]">
+              <div className="text-[10px] text-[#fbbf24] uppercase tracking-[2px] font-bold mb-3">💡 Dica Senior</div>
+              <p className="text-[14px] text-[#d97706] leading-[1.8]">{concept.tip}</p>
             </div>
 
             <div className="flex justify-center pt-2">
