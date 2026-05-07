@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { notFound } from 'next/navigation'
-import { getConcepts, getConceptById } from '@/lib/loaders'
+import { getConcepts, getConceptById, getRelatedTerms } from '@/lib/loaders'
 import { ConceptHero } from '@/components/concept/ConceptHero'
 import { DefinitionBlock } from '@/components/concept/DefinitionBlock'
 import { SectionGrid } from '@/components/concept/SectionGrid'
@@ -11,7 +11,8 @@ import { CodeBlock } from '@/components/ui/CodeBlock'
 import { NavArrows } from '@/components/concept/NavArrows'
 import { ProgressButtons } from '@/components/concept/ProgressButtons'
 import { FlashcardMode } from '@/components/concept/FlashcardMode'
-import type { Concept } from '@/lib/schemas'
+import { RelatedTerms } from '@/components/concept/RelatedTerms'
+import type { Concept, GlossaryItem } from '@/lib/schemas'
 
 // ─── Client view wrapper ────────────────────────────────────────────────────
 interface ConceptViewProps {
@@ -20,9 +21,10 @@ interface ConceptViewProps {
   next: number | null
   current: number
   total: number
+  relatedTerms: GlossaryItem[]
 }
 
-function ConceptView({ concept, prev, next, current, total }: ConceptViewProps) {
+function ConceptView({ concept, prev, next, current, total, relatedTerms }: ConceptViewProps) {
   const [flashcard, setFlashcard] = useState(false)
 
   const sections = [
@@ -53,6 +55,7 @@ function ConceptView({ concept, prev, next, current, total }: ConceptViewProps) 
         <TipBlock text={concept.tip} />
         <QuestionAccordion questions={concept.questions} />
         <CodeBlock code={concept.code} />
+        <RelatedTerms terms={relatedTerms} />
         <NavArrows prevId={prev} nextId={next} current={current} total={total} />
       </div>
     </div>
@@ -72,6 +75,7 @@ export default function ConceptPage({ params }: { params: { id: string } }) {
 
   const all = getConcepts()
   const idx = all.findIndex(c => c.id === id)
+  const relatedTerms = getRelatedTerms(concept)
 
   return (
     <ConceptView
@@ -80,6 +84,7 @@ export default function ConceptPage({ params }: { params: { id: string } }) {
       next={all[idx + 1]?.id ?? null}
       current={idx + 1}
       total={all.length}
+      relatedTerms={relatedTerms}
     />
   )
 }

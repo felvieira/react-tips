@@ -26,3 +26,19 @@ export function getGlossaryByTerm(term: string): GlossaryItem | undefined {
 export function getGlossaryCategories(): string[] {
   return [...new Set(getGlossary().map(g => g.category))]
 }
+
+export function getRelatedTerms(concept: Concept): GlossaryItem[] {
+  const glossary = getGlossary()
+  const haystack = [
+    concept.title,
+    concept.summary,
+    concept.definition,
+    concept.problem,
+    concept.solution,
+    concept.tip,
+  ].join(' ').toLowerCase()
+
+  return glossary.filter(g =>
+    haystack.includes(g.term.toLowerCase())
+  ).slice(0, 6)
+}
