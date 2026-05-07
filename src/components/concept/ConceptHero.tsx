@@ -1,7 +1,13 @@
+import { type ReactNode } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import type { Concept } from '@/lib/schemas'
 
-export function ConceptHero({ concept }: { concept: Concept }) {
+interface ConceptHeroProps {
+  concept: Concept
+  children?: ReactNode
+}
+
+export function ConceptHero({ concept, children }: ConceptHeroProps) {
   return (
     <div className="px-9 pt-7 pb-6 border-b border-border bg-gradient-to-br from-surface to-bg">
       <div className="flex items-start gap-4 mb-4">
@@ -12,6 +18,7 @@ export function ConceptHero({ concept }: { concept: Concept }) {
         </div>
       </div>
       <p className="text-[13px] text-[#7a9cc0] leading-relaxed max-w-2xl">{concept.summary}</p>
+      {children}
     </div>
   )
 }

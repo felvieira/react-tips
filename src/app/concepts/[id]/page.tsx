@@ -7,6 +7,7 @@ import { TipBlock } from '@/components/concept/TipBlock'
 import { QuestionAccordion } from '@/components/concept/QuestionAccordion'
 import { CodeBlock } from '@/components/ui/CodeBlock'
 import { NavArrows } from '@/components/concept/NavArrows'
+import { ProgressButtons } from '@/components/concept/ProgressButtons'
 
 export function generateStaticParams() {
   return getConcepts().map(c => ({ id: String(c.id) }))
@@ -30,7 +31,9 @@ export default async function ConceptPage({ params }: { params: Promise<{ id: st
 
   return (
     <div>
-      <ConceptHero concept={concept} />
+      <ConceptHero concept={concept}>
+        <ProgressButtons conceptId={concept.id} />
+      </ConceptHero>
       <div className="px-9 pb-9">
         <DefinitionBlock text={concept.definition} />
         <SectionGrid items={sections} />
