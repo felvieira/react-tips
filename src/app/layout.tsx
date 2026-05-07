@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import type { Metadata } from 'next'
 import { IBM_Plex_Mono, Syne } from 'next/font/google'
 import './globals.css'
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   title: 'React & Next.js Senior — Guia de Entrevista',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={`${mono.variable} ${display.variable}`}>
       <body className="bg-bg text-text font-mono min-h-screen">{children}</body>

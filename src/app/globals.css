@@ -16,5 +16,5 @@
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar { width: 4px; }
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: #1a2535; border-radius: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
 }
