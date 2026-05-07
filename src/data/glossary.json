@@ -1,0 +1,941 @@
+[
+  {
+    "term": "useState",
+    "category": "Hook",
+    "def": "Hook básico para estado local do componente.",
+    "what": "Retorna [value, setter]. Quando setter é chamado com valor diferente, o componente re-renderiza. Updates são assíncronos e batched no React 18.",
+    "whenUse": "Estado local simples: toggle de modal, contador, valor de input, flag de loading.",
+    "whenNot": "Estado compartilhado entre componentes (use Context/Zustand). Estado derivado calculável (use useMemo direto no render).",
+    "pros": [
+      "Simples e direto",
+      "Re-render automático",
+      "Funciona com batching R18",
+      "Imutabilidade forçada via setter"
+    ],
+    "cons": [
+      "Não compartilha entre componentes",
+      "Updates stale em closures",
+      "Múltiplos podem ficar difíceis de manter",
+      "Não para estado global complexo"
+    ],
+    "code": "const [count, setCount] = useState(0);\nconst [user, setUser] = useState(null);\n\n// Functional update (evita stale closure)\nsetCount(prev => prev + 1);\n\n// Lazy initial state (só roda uma vez)\nconst [data] = useState(() => heavyCompute());"
+  },
+  {
+    "term": "useEffect",
+    "category": "Hook",
+    "def": "Roda side effects após o React commitar mudanças no DOM.",
+    "what": "Executa APÓS o paint (assíncrono). Recebe função de setup e array de deps. Retornar função = cleanup (roda antes de re-executar ou desmontar). Deps controlam quando o effect executa.",
+    "whenUse": "Sincronizar com sistemas externos: APIs, WebSockets, timers, subscriptions, manipular DOM de libs terceiras.",
+    "whenNot": "Calcular estado derivado (faça no corpo da função). Event handlers (use callbacks). Mutações que precisam ser antes do paint (use useLayoutEffect).",
+    "pros": [
+      "Declarativo",
+      "Cleanup automático",
+      "Controle fino via deps",
+      "Evita race conditions com cleanup"
+    ],
+    "cons": [
+      "Difícil de debugar",
+      "Loop infinito fácil",
+      "Executa 2x em StrictMode",
+      "Deps instáveis são armadilha"
+    ],
+    "code": "// Fetch com cleanup (abort)\nuseEffect(() => {\n  const controller = new AbortController();\n  fetch('/api/data', { signal: controller.signal })\n    .then(r => r.json()).then(setData);\n  return () => controller.abort(); // cleanup\n}, [id]);\n\n// Timer\nuseEffect(() => {\n  const id = setInterval(() => setTick(t => t+1), 1000);\n  return () => clearInterval(id);\n}, []);"
+  },
+  {
+    "term": "useLayoutEffect",
+    "category": "Hook",
+    "def": "Como useEffect, mas executa síncronamente ANTES do browser pintar.",
+    "what": "Timing: render → commit → useLayoutEffect → PAINT → useEffect. Por ser síncrono, bloqueia o paint até concluir. Tem acesso ao DOM já atualizado.",
+    "whenUse": "Leituras de layout que precisam ser antes do paint: posicionar tooltips/dropdowns, scroll restoration, medir elementos, ajustar posição sem flash.",
+    "whenNot": "Side effects que não precisam do DOM. SSR (não há DOM). Operações lentas (bloqueia o paint). Para 90% dos casos, useEffect é suficiente.",
+    "pros": [
+      "Evita flash visual",
+      "DOM já atualizado",
+      "Sincroniza antes de pintar"
+    ],
+    "cons": [
+      "Bloqueia paint se pesado",
+      "Não funciona em SSR (warning)",
+      "Pode travar UI se mal usado"
+    ],
+    "code": "// Posicionar tooltip sem flash\nuseLayoutEffect(() => {\n  const rect = btnRef.current.getBoundingClientRect();\n  setPos({ top: rect.bottom + 8, left: rect.left });\n}, [open]);\n// vs useEffect: usuário veria 1 frame na posição errada"
+  },
+  {
+    "term": "useMemo",
+    "category": "Hook",
+    "def": "Memoiza o RESULTADO de uma computação. Recomputa apenas quando as deps mudam.",
+    "what": "Guarda o valor entre renders. React compara deps com Object.is. Se iguais, retorna valor cacheado. Custo: comparação de deps a cada render.",
+    "whenUse": "Computações genuinamente custosas (sort/filter de listas grandes, cálculos matemáticos pesados). Criar objeto/array estável para passar a componente memoizado ou usar como dep de outro hook.",
+    "whenNot": "Valores primitivos (string, number, boolean). Computações simples/rápidas. Objetos que mudam a cada render de qualquer forma.",
+    "pros": [
+      "Evita recálculo desnecessário",
+      "Estabiliza referências",
+      "Melhora performance em listas grandes"
+    ],
+    "cons": [
+      "Custo de comparação de deps",
+      "Over-use piora performance",
+      "Não é garantia — React pode descartar o cache"
+    ],
+    "code": "// ✅ Justificado: operação custosa\nconst sorted = useMemo(\n  () => [...items].sort((a, b) => b.score - a.score),\n  [items]\n);\n\n// ❌ Desnecessário: primitivo\nconst nome = useMemo(() => \"Felipe\", []); // overhead puro"
+  },
+  {
+    "term": "useCallback",
+    "category": "Hook",
+    "def": "Memoiza uma FUNÇÃO. Mantém a mesma referência entre renders enquanto deps não mudam.",
+    "what": "useCallback(fn, deps) equivale a useMemo(() => fn, deps). Útil quando você precisa passar função estável para componentes memoizados ou como dep de outro hook.",
+    "whenUse": "Passar callback para componente memoizado com React.memo. Função usada como dep em useEffect. Handlers passados para listas virtualizadas.",
+    "whenNot": "Funções locais que não são passadas para baixo. Quando o componente receptor não é memoizado (não adianta nada). Componentes simples sem problemas de performance.",
+    "pros": [
+      "Mantém referência estável",
+      "Evita re-renders em filhos memoizados",
+      "Correto para deps de hooks"
+    ],
+    "cons": [
+      "Overhead se mal usado",
+      "Cria falsa sensação de segurança",
+      "Par obrigatório com React.memo para ter efeito"
+    ],
+    "code": "const handleSave = useCallback((id, data) => {\n  dispatch({ type: 'save', id, data });\n}, [dispatch]); // dispatch é estável\n\n// Só vale se o filho usa React.memo\n<HeavyForm onSave={handleSave} />"
+  },
+  {
+    "term": "useRef",
+    "category": "Hook",
+    "def": "Cria objeto { current } mutável que persiste entre renders sem causar re-render quando alterado.",
+    "what": "Dois usos principais: 1) Ref para elemento DOM (acesso direto). 2) Valor mutável que você quer manter entre renders sem triggering re-render. ref.current pode ser alterado livremente.",
+    "whenUse": "Acessar DOM diretamente (focus, measure, scroll). Guardar instância de biblioteca externa. Guardar timer ID ou valor anterior. Interoperação com código não-React.",
+    "whenNot": "Armazenar dados que precisam aparecer na UI quando mudam (use useState). Dados que participam do fluxo de dados (use state/props).",
+    "pros": [
+      "Sem re-render ao alterar",
+      "Persiste entre renders",
+      "Acesso direto ao DOM",
+      "Perfeito para valores 'behind the scenes'"
+    ],
+    "cons": [
+      "Mudança não dispara re-render (intencional, mas confunde)",
+      "Acesso antes de montar retorna null",
+      "Não reativo — UI não atualiza automaticamente"
+    ],
+    "code": "const inputRef = useRef(null);\nconst timerRef = useRef(null);\nconst countRef = useRef(0); // não vai na UI\n\n// Acessar DOM\n<input ref={inputRef} />\ninputRef.current?.focus();\n\n// Guardar timer sem re-render\ntimerRef.current = setTimeout(doSomething, 1000);\nclearTimeout(timerRef.current);"
+  },
+  {
+    "term": "useReducer",
+    "category": "Hook",
+    "def": "Alternativa ao useState para estado complexo com múltiplas transições.",
+    "what": "Recebe (reducer, initialState). O reducer é função pura (state, action) => newState. dispatch(action) dispara a transição. Centraliza lógica de state em um lugar.",
+    "whenUse": "Estado com múltiplos sub-valores relacionados. Próximo state depende do atual de forma complexa. Lógica de transição que você quer testar isoladamente. +4 useState entrelaçados.",
+    "whenNot": "1-2 valores simples independentes. Estado que não tem lógica de transição complexa. Quando a simplicidade de useState é suficiente.",
+    "pros": [
+      "Lógica centralizada e testável",
+      "Transições explícitas",
+      "Escala melhor que múltiplos useState",
+      "Padrão familiar (Redux-like)"
+    ],
+    "cons": [
+      "Mais verboso para casos simples",
+      "Boilerplate de action types",
+      "Não compartilha entre componentes sozinho"
+    ],
+    "code": "const reducer = (state, action) => {\n  switch (action.type) {\n    case 'fetch':   return {...state, loading: true};\n    case 'success': return {data: action.data, loading: false, error: null};\n    case 'error':   return {...state, loading: false, error: action.error};\n    default: return state;\n  }\n};\n\nconst [state, dispatch] = useReducer(reducer,\n  { data: null, loading: false, error: null });\n\ndispatch({ type: 'fetch' });"
+  },
+  {
+    "term": "useContext",
+    "category": "Hook",
+    "def": "Lê o valor do Context Provider mais próximo na árvore. Re-renderiza quando value muda.",
+    "what": "Toda vez que o value do Provider muda, TODOS os componentes que chamam useContext(MyContext) re-renderizam — mesmo que só usem parte do valor. Não tem seletor por padrão.",
+    "whenUse": "Dados que raramente mudam: tema (dark/light), idioma, usuário logado. Dados que muitos componentes em nível profundo precisam acessar.",
+    "whenNot": "Estado que muda frequentemente (causará re-renders em cascata). Substituição de state management robusto em apps grandes. Quando passar por apenas 1-2 níveis (props são mais claras).",
+    "pros": [
+      "Evita prop drilling",
+      "Simples de implementar",
+      "Nativo do React (sem lib)"
+    ],
+    "cons": [
+      "Todos consumers re-renderizam quando value muda",
+      "Sem seletor nativo",
+      "Performance ruim para state dinâmico",
+      "Difícil de otimizar sem libs extras"
+    ],
+    "code": "const ThemeContext = createContext('light');\n\nfunction App() {\n  const [theme, setTheme] = useState('dark');\n  // useMemo estabiliza o objeto value\n  const val = useMemo(() => ({theme, setTheme}), [theme]);\n  return (\n    <ThemeContext.Provider value={val}>\n      <App />\n    </ThemeContext.Provider>\n  );\n}\nconst { theme } = useContext(ThemeContext);"
+  },
+  {
+    "term": "useTransition",
+    "category": "Hook 18",
+    "def": "Marca setState como não-urgente. Retorna [isPending, startTransition]. Mantém UI responsiva durante updates pesados.",
+    "what": "O React pode interromper a transição não-urgente se um update urgente chegar (ex: digitação). isPending indica que uma transição está em andamento — use para mostrar feedback visual.",
+    "whenUse": "Filtros pesados em listas grandes. Navegação entre tabs com conteúdo pesado. Qualquer atualização que pode demorar mas não precisa ser imediata.",
+    "whenNot": "Inputs controlados (sempre urgentes). Animações. Updates que o usuário PRECISA ver imediatamente. Chamadas de API (use debounce).",
+    "pros": [
+      "UI permanece responsiva",
+      "isPending para feedback visual",
+      "Sem lib externa",
+      "Interrompível pelo React"
+    ],
+    "cons": [
+      "Não funciona para chamadas async de rede",
+      "Mais verboso que debounce simples",
+      "Precisa de React 18"
+    ],
+    "code": "const [isPending, startTransition] = useTransition();\n\nconst handleFilter = (value) => {\n  setQuery(value); // urgente: input atualiza imediato\n\n  startTransition(() => {\n    setFiltered(bigList.filter(i =>\n      i.name.includes(value) // não-urgente\n    ));\n  });\n};\n\n{isPending && <Spinner />}"
+  },
+  {
+    "term": "useDeferredValue",
+    "category": "Hook 18",
+    "def": "Retorna versão 'atrasada' de um valor. React mantém valor anterior enquanto processa o novo.",
+    "what": "Ideal quando você recebe o valor de fora (props/context) e não controla o setState. Enquanto o novo valor processa, o antigo permanece estável — sem tearing (estados visuais inconsistentes).",
+    "whenUse": "Recebe valor via props e precisa de render pesado. Input que alimenta lista grande ou gráfico. Quando useTransition não é aplicável (não controla o setter).",
+    "whenNot": "Para chamadas de API (use debounce). Quando você CONTROLA o setState (use useTransition). Valores simples/rápidos de renderizar.",
+    "pros": [
+      "Evita tearing",
+      "Não precisa controlar o setState",
+      "Valor anterior permanece estável",
+      "Combina bem com useMemo"
+    ],
+    "cons": [
+      "Não cancela renders, só prioriza",
+      "Não atrasa API calls",
+      "Precisa React 18"
+    ],
+    "code": "function HeavyList({ filter }) {\n  const deferredFilter = useDeferredValue(filter);\n  const isStale = filter !== deferredFilter;\n\n  const results = useMemo(\n    () => bigData.filter(d => d.name.includes(deferredFilter)),\n    [deferredFilter]\n  );\n\n  return (\n    <div style={{ opacity: isStale ? 0.7 : 1 }}>\n      {results.map(r => <Row key={r.id} data={r} />)}\n    </div>\n  );\n}"
+  },
+  {
+    "term": "useId",
+    "category": "Hook 18",
+    "def": "Gera ID único e estável entre server e client. Previne hydration mismatch.",
+    "what": "ID determinístico baseado na posição do componente na árvore React. Mesmo ID no server e no client — essencial para SSR/RSC. Retorna string como ':r1:'.",
+    "whenUse": "Conectar label com input (htmlFor + id). Atributos ARIA (aria-labelledby, aria-describedby). Qualquer ID que precisa ser estável entre SSR e cliente.",
+    "whenNot": "Keys de listas (use ID do dado). IDs globalmente únicos para banco de dados (use UUID). IDs que precisam ser legíveis por humanos.",
+    "pros": [
+      "Sem hydration mismatch",
+      "Estável entre renders",
+      "Seguro com Concurrent Mode",
+      "Pode gerar múltiplos relacionados"
+    ],
+    "cons": [
+      "Formato interno (:r1:) não bonito",
+      "Não serve para keys de lista",
+      "Só React 18+"
+    ],
+    "code": "function FormField({ label }) {\n  const id = useId();\n  return (\n    <div>\n      <label htmlFor={id}>{label}</label>\n      <input id={id} />\n    </div>\n  );\n}\n\n// Múltiplos relacionados\nfunction PasswordInput() {\n  const id = useId();\n  return <>\n    <input id={id + '-input'} type=\"password\" aria-describedby={id + '-hint'} />\n    <span id={id + '-hint'}>Mínimo 8 caracteres</span>\n  </>;\n}"
+  },
+  {
+    "term": "useSyncExternalStore",
+    "category": "Hook 18",
+    "def": "Subscriba em stores externos sem tearing em Concurrent Mode.",
+    "what": "API oficial para integrar stores fora do React (Redux, Zustand, window.matchMedia). Três argumentos: subscribe (registra listener), getSnapshot (lê valor atual), getServerSnapshot (SSR fallback).",
+    "whenUse": "Criar lib de state management customizada. Subscribar APIs nativas do browser (matchMedia, online/offline, BroadcastChannel). Integrar stores externos com Concurrent Mode corretamente.",
+    "whenNot": "State interno do React (use useState/useReducer). Quando a lib já usa internamente (Zustand, Redux Toolkit já fazem isso). Casos simples onde useEffect+useState basta.",
+    "pros": [
+      "Sem tearing garantido",
+      "API oficial (não hack)",
+      "Funciona com Concurrent Mode",
+      "SSR-safe com getServerSnapshot"
+    ],
+    "cons": [
+      "Mais verbose que useEffect",
+      "Overkill para casos simples",
+      "Só React 18+"
+    ],
+    "code": "function useOnline() {\n  return useSyncExternalStore(\n    (cb) => {\n      window.addEventListener('online', cb);\n      window.addEventListener('offline', cb);\n      return () => {\n        window.removeEventListener('online', cb);\n        window.removeEventListener('offline', cb);\n      };\n    },\n    () => navigator.onLine,\n    () => true // SSR: assume online\n  );\n}\nconst isOnline = useOnline(); // reativo, sem tearing"
+  },
+  {
+    "term": "JSX",
+    "category": "Core",
+    "def": "Sintaxe que parece HTML mas compila para React.createElement().",
+    "what": "Transpilado pelo Babel/SWC para React.createElement(type, props, ...children). Expressões JS via {}. Atributos em camelCase (className, onClick). Auto-escape de { variavel } previne XSS.",
+    "whenUse": "Em todo componente React — é o padrão de fato. Mais legível que createElement manual.",
+    "whenNot": "Ambientes sem transpilação. Código gerado programaticamente (aí createElement pode ser mais limpo).",
+    "pros": [
+      "Legível — parece HTML",
+      "Auto-escape previne XSS",
+      "IntelliSense/TypeScript funciona bem",
+      "Suporte massivo em tooling"
+    ],
+    "cons": [
+      "Precisa de transpilação (Babel/SWC)",
+      "Pode confundir iniciantes (parece HTML mas não é)",
+      "Regras: sempre um root, className em vez de class"
+    ],
+    "code": "// JSX compila para:\nconst el = <h1 className=\"title\">{nome}</h1>;\n// React.createElement('h1', {className:'title'}, nome)\n\n// Expressões\n<div>{isLogged ? <User /> : <Login />}</div>\n\n// Spread de props\n<Button {...buttonProps} onClick={handleClick} />"
+  },
+  {
+    "term": "Virtual DOM",
+    "category": "Core",
+    "def": "Representação em JS da árvore do DOM real. React compara versões e aplica só as diferenças.",
+    "what": "Cada render cria uma nova representação Virtual DOM. O diffing algorithm (reconciler) compara com a versão anterior e calcula o conjunto mínimo de operações para atualizar o DOM real.",
+    "whenUse": "É usado automaticamente pelo React em todo render. Não é algo que você 'usa' diretamente.",
+    "whenNot": "Para manipulações pontuais de DOM onde refs diretos são mais performáticos (animações, canvas, D3).",
+    "pros": [
+      "Otimiza atualizações de DOM",
+      "Abstrai diferenças entre browsers",
+      "Permite SSR (renderiza em string)",
+      "Base para Concurrent Mode"
+    ],
+    "cons": [
+      "Overhead de memória (manter 2 árvores)",
+      "Não é sempre mais rápido que DOM direto",
+      "Camada extra de abstração"
+    ],
+    "code": "// Você escreve:\nsetState({ count: count + 1 });\n\n// React internamente:\n// 1. Re-executa a função componente\n// 2. Cria novo Virtual DOM\n// 3. Diff: o que mudou?\n// 4. Aplica APENAS as mudanças no DOM real\n// — em vez de recriar o DOM todo"
+  },
+  {
+    "term": "Reconciliation",
+    "category": "Core",
+    "def": "Algoritmo que compara dois Virtual DOMs e calcula o mínimo de mudanças para o DOM real.",
+    "what": "React assume: 1) Elementos de tipos diferentes produzem árvores diferentes (destrói e recria). 2) Keys identificam elementos entre renders. O algoritmo é O(n) graças a essas heurísticas.",
+    "whenUse": "Acontece automaticamente em todo setState/re-render. Keys corretas nas listas guiam o algoritmo.",
+    "whenNot": "Não há como desativar — é core do React. Otimize via React.memo para evitar reconciliação desnecessária.",
+    "pros": [
+      "O(n) eficiente",
+      "Automático",
+      "Permite updates declarativos",
+      "Base para SSR e Concurrent Mode"
+    ],
+    "cons": [
+      "Pode ser subótimo sem keys corretas",
+      "Index como key engana o algoritmo",
+      "Overhead em árvores enormes"
+    ],
+    "code": "// Key correta → React sabe exatamente o que mudou\n['Ana','Bruno','Carlos'].map(n => (\n  <Item key={n.id} name={n} /> // ✅\n));\n\n// Tipo mudou → destrói e recria do zero\n// Antes: <Input type=\"text\" />\n// Depois: <Select /> → destrói Input, cria Select"
+  },
+  {
+    "term": "Fiber",
+    "category": "Core",
+    "def": "Arquitetura interna do React 16+ que permite renderização interrompível e priorização.",
+    "what": "Reescreveu o reconciliador para processar por 'fibras' (unidades de trabalho). Permite pausar/retomar/abortar renders. Base para: Concurrent Mode, Suspense, startTransition, streaming SSR, Selective Hydration.",
+    "whenUse": "É a arquitetura interna — não 'usa' diretamente. Entender Fiber explica o comportamento de prioridade e o porquê de StrictMode rodar effects 2x.",
+    "whenNot": "Não é algo que você desativa ou substitui.",
+    "pros": [
+      "Renderização interrompível",
+      "Priorização de updates",
+      "Base para todo Concurrent Mode",
+      "Melhor UX em UIs complexas"
+    ],
+    "cons": [
+      "Mais complexo internamente",
+      "Requer compreensão de prioridades para debug avançado",
+      "StrictMode 2x execução confunde sem conhecer Fiber"
+    ],
+    "code": "// Fiber habilita priorização:\n// Alta prioridade: teclado, clique, animação\n// Baixa prioridade: fetch, render de background\n\nstartTransition(() => {\n  setFiltered(bigList.filter(...));\n  // React pode pausar esse trabalho se\n  // o usuário digitar (alta prioridade)\n})"
+  },
+  {
+    "term": "Suspense",
+    "category": "Core",
+    "def": "Componente que mostra fallback enquanto filhos 'suspendem' (lançam Promise não resolvida).",
+    "what": "Filhos lançam Promise quando não estão prontos. Suspense captura e renderiza fallback até resolver. Suportado nativamente em: React.lazy, RSC/Next.js, e libs com suspense:true (React Query, Relay).",
+    "whenUse": "Code splitting com React.lazy. Data fetching com RSC + streaming. Loading states independentes por área da UI. Granularidade — um Suspense por área.",
+    "whenNot": "Para um único loading state global (use estado manual). Quando a lib não suporta suspense. Para erros (combine com ErrorBoundary).",
+    "pros": [
+      "Loading declarativo",
+      "Granularidade de UI",
+      "Streaming SSR",
+      "Selective Hydration"
+    ],
+    "cons": [
+      "Requer lib compatível (não funciona com fetch em useEffect)",
+      "Sem Suspense para erros",
+      "Aninhamento pode ser confuso"
+    ],
+    "code": "// Code splitting\nconst Dashboard = lazy(() => import('./Dashboard'));\n\n// Data fetching (RSC)\nexport default function Page() {\n  return (\n    <ErrorBoundary>\n      <Suspense fallback={<DashSkeleton />}>\n        <Dashboard /> {/* async Server Component */}\n      </Suspense>\n    </ErrorBoundary>\n  );\n}"
+  },
+  {
+    "term": "Error Boundary",
+    "category": "Core",
+    "def": "Componente class que captura erros em filhos. Mostra UI de fallback em vez de quebrar o app.",
+    "what": "Implementa getDerivedStateFromError (atualiza state para mostrar fallback) e/ou componentDidCatch (side effects: log, Sentry). NÃO captura: async, event handlers, SSR, próprios erros.",
+    "whenUse": "Isolar partes da UI que podem falhar (widgets, feeds, integrações). Em cada rota do app. Combinado com Sentry/Bugsnag para monitoramento.",
+    "whenNot": "Para erros em event handlers (use try/catch). Para erros async/fetch (use estados de erro). Para toda a aplicação sem granularidade.",
+    "pros": [
+      "Isola falhas",
+      "UI de fallback amigável",
+      "Integra com monitoramento",
+      "Evita tela branca"
+    ],
+    "cons": [
+      "Precisa ser classe (não hook nativo)",
+      "Não captura async",
+      "Não captura event handlers"
+    ],
+    "code": "// react-error-boundary (lib moderna)\nimport { ErrorBoundary } from 'react-error-boundary';\n\n<ErrorBoundary\n  fallback={<p>Algo deu errado.</p>}\n  onError={(error, info) => Sentry.captureException(error)}\n  onReset={() => queryClient.clear()}\n>\n  <Dashboard />\n</ErrorBoundary>"
+  },
+  {
+    "term": "Hydration",
+    "category": "Core",
+    "def": "Processo de attachar event listeners do React ao HTML pré-gerado pelo servidor.",
+    "what": "SSR gera HTML estático. Browser recebe e exibe imediatamente (rápido). React então 'hidrata' — reconcilia a árvore virtual com o DOM existente e adiciona interatividade. Hydration Mismatch ocorre quando HTML server !== client render.",
+    "whenUse": "Acontece automaticamente em SSR/SSG com Next.js, Remix, etc.",
+    "whenNot": "Em CSR puro (SPA sem SSR) não há hydration.",
+    "pros": [
+      "HTML disponível antes do JS carregar",
+      "Melhor FCP/LCP",
+      "SEO-friendly",
+      "Selective hydration no React 18"
+    ],
+    "cons": [
+      "TTI pode ser alto (HTML aparece mas não é interativo)",
+      "Hydration mismatch é bug sutil",
+      "Dois renders (server + client)",
+      "Custo computacional no client"
+    ],
+    "code": "// Causar hydration mismatch — evite:\n<div>{new Date().toLocaleString()}</div>\n// Server: 14:23:01 / Client: 14:23:02 → MISMATCH\n\n// ✅ Correto — state só no client\nconst [time, setTime] = useState('');\nuseEffect(() => setTime(new Date().toLocaleString()), []);\n<div>{time}</div>"
+  },
+  {
+    "term": "Server Component (RSC)",
+    "category": "Next.js",
+    "def": "Componente que renderiza exclusivamente no servidor. Sem JS no bundle do cliente.",
+    "what": "Roda em Node.js no servidor. Tem acesso direto a banco de dados, filesystem, variáveis de ambiente. Zero JavaScript vai para o bundle do cliente. Default no App Router.",
+    "whenUse": "Busca de dados (DB, API). Componentes que não têm interatividade. Componentes pesados com libs grandes que não devem ir ao bundle. Acessar env secrets.",
+    "whenNot": "Quando precisa de useState, useEffect, event handlers, browser APIs, window, document, localStorage.",
+    "pros": [
+      "Zero JS no bundle",
+      "Acesso direto ao DB",
+      "Dados seguros (não expostos ao client)",
+      "Reduz bundle size",
+      "SEO natural"
+    ],
+    "cons": [
+      "Sem interatividade",
+      "Sem hooks de estado",
+      "Sem browser APIs",
+      "Debugging diferente"
+    ],
+    "code": "// Acesso direto ao banco — zero bundle extra\nasync function UserProfile({ userId }) {\n  const user = await db.users.findUnique({ where: { id: userId }});\n  const posts = await db.posts.findMany({ where: { authorId: userId }});\n\n  return (\n    <div>\n      <h1>{user.name}</h1>\n      {posts.map(p => <PostCard key={p.id} post={p} />)}\n      {/* AddPostButton precisa de interação → Client Component */}\n      <AddPostButton userId={userId} />\n    </div>\n  );\n}"
+  },
+  {
+    "term": "Server Action",
+    "category": "Next.js",
+    "def": "Função 'use server' que executa no servidor mas pode ser chamada pelo cliente. Sem API route.",
+    "what": "Marcada com 'use server'. Pode ser usada como action de form ou chamada de Client Component. Next.js cuida de serialização, routing e CSRF protection automático.",
+    "whenUse": "Mutações de dados (create, update, delete). Formulários. Ações tightly-coupled ao seu app. Quando você quer eliminar boilerplate de API route.",
+    "whenNot": "APIs públicas para terceiros (use Route Handler). Endpoints consumidos por apps mobile nativa. Webhooks recebidos de serviços externos.",
+    "pros": [
+      "Sem boilerplate de API",
+      "CSRF protection automático",
+      "Funciona sem JS (progressive enhancement)",
+      "revalidatePath/Tag integrado"
+    ],
+    "cons": [
+      "Tightly-coupled ao Next.js",
+      "Não é API pública",
+      "Serialização limitada (só JSON)",
+      "Ainda experimental em alguns aspectos"
+    ],
+    "code": "'use server';\nimport { revalidatePath } from 'next/cache';\n\nexport async function createPost(formData) {\n  const title = formData.get('title');\n  if (!title) throw new Error('Title required');\n\n  await db.posts.create({ data: { title } });\n  revalidatePath('/posts'); // invalida cache\n}\n\n// Client Component\n'use client';\nfunction NewPostForm() {\n  return (\n    <form action={createPost}>\n      <input name=\"title\" required />\n      <button type=\"submit\">Criar</button>\n    </form>\n  );\n}"
+  },
+  {
+    "term": "SSG",
+    "category": "Next.js",
+    "def": "Static Site Generation. HTML gerado em build-time. Servido como arquivo estático do CDN.",
+    "what": "Dados são buscados na hora do build. HTML é gerado uma vez e servido sempre igual. Mais rápido possível (CDN edge, sem servidor para responder). Requer rebuild para atualizar.",
+    "whenUse": "Conteúdo que raramente muda: blog, docs, landing pages, portfólio. Conteúdo igual para todos os usuários.",
+    "whenNot": "Dados que mudam frequentemente. Conteúdo per-user. Páginas com milhares de variações dinâmicas.",
+    "pros": [
+      "Máxima performance (CDN edge)",
+      "Zero servidor em runtime",
+      "Escala infinita",
+      "Melhor para SEO"
+    ],
+    "cons": [
+      "Rebuild necessário para atualizar",
+      "Não serve dados frescos",
+      "Build longo com muitas páginas"
+    ],
+    "code": "// App Router - SSG padrão (sem opções)\nasync function BlogPost({ params }) {\n  // Executado em BUILD TIME, não em runtime\n  const post = await fetch('https://api.com/posts/' + params.id).then(r => r.json());\n  return <article>{post.content}</article>;\n}\n\n// Gerar paths estáticos\nexport async function generateStaticParams() {\n  const posts = await fetch('https://api.com/posts').then(r => r.json());\n  return posts.map(p => ({ id: p.id }));\n}"
+  },
+  {
+    "term": "SSR",
+    "category": "Next.js",
+    "def": "Server-Side Rendering. HTML gerado a cada request. Dados sempre frescos.",
+    "what": "Servidor executa o componente a cada request, busca dados atualizados, gera HTML e envia. Mais lento que SSG mas dados são sempre do momento atual. Suporta dados per-user.",
+    "whenUse": "Dados per-user (dashboard, perfil). Dados que mudam frequentemente (estoque, preços). Conteúdo que depende de cookies/sessão.",
+    "whenNot": "Conteúdo estático (use SSG). Conteúdo semi-estático que tolera staleness (use ISR). Quando performance de CDN é crítica.",
+    "pros": [
+      "Dados sempre frescos",
+      "Suporte a conteúdo per-user",
+      "Acesso a cookies/headers",
+      "SEO com dados atualizados"
+    ],
+    "cons": [
+      "Mais lento que SSG",
+      "Requer servidor rodando",
+      "Custo de infra maior",
+      "TTFB mais alto"
+    ],
+    "code": "// App Router - Força SSR\nasync function Dashboard() {\n  // cache: 'no-store' = sempre busca novo\n  const data = await fetch('/api/user-data',\n    { cache: 'no-store' });\n\n  // Ou: usar cookies/headers torna SSR automaticamente\n  const cookieStore = cookies();\n  const userId = cookieStore.get('userId');\n}\n\n// Ou via export\nexport const dynamic = 'force-dynamic';"
+  },
+  {
+    "term": "ISR",
+    "category": "Next.js",
+    "def": "Incremental Static Regeneration. SSG com revalidação automática em background.",
+    "what": "Página é gerada estaticamente (SSG). Após o tempo de revalidate expirar, a PRÓXIMA request dispara regeneração em background. Usuário recebe a versão antiga até a nova estar pronta (stale-while-revalidate).",
+    "whenUse": "Conteúdo que muda mas tolera staleness: e-commerce (preços/estoque), notícias, catálogos. Quando SSG é muito estático mas SSR é caro demais.",
+    "whenNot": "Dados que precisam ser SEMPRE frescos (use SSR). Dados per-user (use SSR). Dados em tempo real.",
+    "pros": [
+      "Performance próxima ao SSG",
+      "Dados se atualizam automaticamente",
+      "Sem rebuild completo",
+      "Sem servidor por request"
+    ],
+    "cons": [
+      "Dados podem estar stale",
+      "Primeira request após expirar pode ser lenta (reconstrução)",
+      "Complexidade de invalidação"
+    ],
+    "code": "// revalidate em fetch: ISR por dados\nasync function Products() {\n  const products = await fetch('https://api.com/products',\n    { next: { revalidate: 60 } } // revalida a cada 60s\n  ).then(r => r.json());\n  return <ProductList products={products} />;\n}\n\n// Revalidação manual on-demand\n// Em Server Action:\nrevalidateTag('products'); // invalida imediatamente"
+  },
+  {
+    "term": "Middleware",
+    "category": "Next.js",
+    "def": "Função Edge que intercepta requests antes de chegar na rota. Para auth, redirects, headers.",
+    "what": "Roda em Edge Runtime (V8 isolate, CDN global). Executa ANTES de SSG/SSR/Route Handler. Pode redirecionar, reescrever URL, modificar headers/cookies. Configure matcher para filtrar rotas.",
+    "whenUse": "Autenticação e autorização. Redirects baseados em auth/geolocation/A-B testing. Adicionar headers de segurança (CSP, HSTS). Internacionalização (locale routing).",
+    "whenNot": "Operações pesadas ou que requerem Node.js completo. Queries diretas ao banco (use Server Component). Lógica de negócio complexa.",
+    "pros": [
+      "Roda no edge (baixa latência global)",
+      "Antes de qualquer render",
+      "Controle total do request/response",
+      "Suporte a cookies/headers"
+    ],
+    "cons": [
+      "Edge Runtime = APIs limitadas",
+      "Sem Node.js modules",
+      "Sem Prisma/drivers de DB diretos",
+      "Cada request tem overhead"
+    ],
+    "code": "// middleware.ts\nimport { NextResponse } from 'next/server';\nimport { jwtVerify } from 'jose';\n\nexport async function middleware(req) {\n  const token = req.cookies.get('token')?.value;\n  if (!token) {\n    return NextResponse.redirect(new URL('/login', req.url));\n  }\n  // Verificar JWT no edge (jose é edge-compatible)\n  await jwtVerify(token, secret);\n  return NextResponse.next();\n}\n\nexport const config = { matcher: ['/dashboard/:path*'] };"
+  },
+  {
+    "term": "Edge Runtime",
+    "category": "Next.js",
+    "def": "V8 isolates em CDN edge global. Baixa latência, APIs Web restritas, sem Node.js.",
+    "what": "Roda em pontos de presença CDN global (não em servidor central). Startup quase zero (sem cold start). APIs limitadas ao Web Standard (fetch, Request, Response, crypto, etc). Sem fs, http, Buffer, e a maioria dos módulos Node.",
+    "whenUse": "Middleware. Rotas leves de auth/redirect. APIs que precisam de latência ultra-baixa globalmente. Geo-routing. A/B testing em edge.",
+    "whenNot": "Queries diretas ao banco (sem drivers compatíveis). Libs Node.js nativas. Manipulação de arquivos. Operações que precisam de mais de 25MB de memória ou 30s de CPU.",
+    "pros": [
+      "Latência ultra-baixa global",
+      "Zero cold start",
+      "Escala automática",
+      "Ideal para auth/redirects"
+    ],
+    "cons": [
+      "APIs Web restritas",
+      "Sem Node modules",
+      "Limite de memória (25MB)",
+      "Prisma não funciona diretamente"
+    ],
+    "code": "// app/api/edge/route.ts\nexport const runtime = 'edge';\n\nexport async function GET(req: Request) {\n  const { searchParams } = new URL(req.url);\n  const region = process.env.VERCEL_REGION;\n  return Response.json({ region, q: searchParams.get('q') });\n}\n\n// ❌ Não funciona no edge\nimport { PrismaClient } from '@prisma/client'; // erro!\nimport fs from 'fs'; // erro!"
+  },
+  {
+    "term": "App Router",
+    "category": "Next.js",
+    "def": "Sistema de rotas do Next.js 13+ baseado em /app/. Suporta RSC, Server Actions, Layouts, Streaming.",
+    "what": "Usa convenções de arquivo: page.tsx (rota), layout.tsx (layout persistente), loading.tsx (Suspense automático), error.tsx (Error Boundary automático), route.ts (API). Todos os componentes são Server Components por padrão.",
+    "whenUse": "Qualquer novo projeto Next.js 13+. Quando precisa de RSC, streaming, Server Actions, ou layouts aninhados complexos.",
+    "whenNot": "Projetos legados no Pages Router que migraram parcialmente. Quando toda a equipe ainda está aprendendo as diferenças.",
+    "pros": [
+      "RSC por padrão",
+      "Layouts aninhados",
+      "Streaming automático",
+      "Server Actions",
+      "Melhor performance por default"
+    ],
+    "cons": [
+      "Curva de aprendizado",
+      "Diferente do Pages Router",
+      "Caching pode confundir",
+      "Menos material de apoio que Pages Router"
+    ],
+    "code": "app/\n├── layout.tsx        // layout raiz (persiste)\n├── page.tsx          // rota /\n├── loading.tsx       // Suspense auto para /\n├── error.tsx         // ErrorBoundary auto para /\n├── dashboard/\n│   ├── layout.tsx    // layout aninhado\n│   ├── page.tsx      // rota /dashboard\n│   └── [id]/\n│       └── page.tsx  // rota /dashboard/[id]\n└── api/\n    └── posts/\n        └── route.ts  // GET/POST /api/posts"
+  },
+  {
+    "term": "Context API",
+    "category": "Padrão",
+    "def": "Compartilha valores entre componentes sem prop drilling.",
+    "what": "createContext cria o contexto. Provider envolve a árvore com value. useContext consome. TODOS os consumers re-renderizam quando value muda — sem seletor nativo.",
+    "whenUse": "Dados que raramente mudam: tema, idioma, usuário logado. Poucos consumers. Dado que não precisa de updates frequentes.",
+    "whenNot": "Estado que muda frequentemente (lista, timer, real-time). Muitos consumers com atualizações parciais diferentes. Apps grandes (use Zustand/Redux).",
+    "pros": [
+      "Nativo do React",
+      "Simples",
+      "Sem lib externa",
+      "Prop drilling zero"
+    ],
+    "cons": [
+      "Re-render em cascata",
+      "Sem seletor nativo",
+      "Performance ruim para estado dinâmico",
+      "Aninhamento de providers vira 'inferno'"
+    ],
+    "code": "const AuthContext = createContext(null);\n\nexport function AuthProvider({ children }) {\n  const [user, setUser] = useState(null);\n  const value = useMemo(() => ({ user, setUser }), [user]);\n  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;\n}\n\nexport const useAuth = () => useContext(AuthContext);"
+  },
+  {
+    "term": "Zustand",
+    "category": "Lib",
+    "def": "State management leve e simples. Sem providers. Store global com seletores.",
+    "what": "create() define a store com estado e actions. useStore(selector) consome apenas a fatia necessária — sem re-render desnecessário. Mínimo boilerplate. Suporta middleware (immer, persist, devtools).",
+    "whenUse": "Estado global que muda frequentemente. Alternativa mais simples ao Redux. Quando Context causa re-renders demais. Apps de tamanho médio a grande.",
+    "whenNot": "Estado local do componente (use useState). Estado de server (use React Query). Projetos pequenos onde Context basta.",
+    "pros": [
+      "Boilerplate mínimo",
+      "Seletores previnem re-renders",
+      "Sem providers",
+      "Middleware: persist, immer, devtools",
+      "Funciona fora de componentes"
+    ],
+    "cons": [
+      "Menos estruturado que Redux",
+      "Sem opinião sobre organização",
+      "Mutations diretas (sem immer) podem causar bugs"
+    ],
+    "code": "import { create } from 'zustand';\n\nconst useStore = create((set) => ({\n  bears: 0,\n  user: null,\n  addBear: () => set(state => ({ bears: state.bears + 1 })),\n  setUser: (user) => set({ user }),\n}));\n\n// Seletor granular — só re-renderiza se bears mudar\nconst bears = useStore(state => state.bears);\nconst addBear = useStore(state => state.addBear);"
+  },
+  {
+    "term": "TanStack Query",
+    "category": "Lib",
+    "def": "Gerencia server state: fetch, cache, sync, mutations. Substitui useState+useEffect para dados externos.",
+    "what": "useQuery: busca e cacheia dados. useMutation: write operations com rollback. Recursos: deduplicação, background refetch, refetch on focus/reconnect, retry, infinite queries, optimistic updates.",
+    "whenUse": "Qualquer fetch de API em Client Component. Quando precisar de cache, retry, loading/error states, refetch automático.",
+    "whenNot": "Em Server Components (use fetch direto). Para estado local da UI (use useState). Para mutations simples sem rollback (Server Actions podem bastar).",
+    "pros": [
+      "Cache automático",
+      "Deduplicação de requests",
+      "Loading/error states gerenciados",
+      "Background sync",
+      "Devtools excelentes"
+    ],
+    "cons": [
+      "Overkill para 1-2 fetches simples",
+      "Bundle size (~13KB)",
+      "Curva de aprendizado das opções",
+      "Não é state manager geral"
+    ],
+    "code": "const { data, isLoading, error } = useQuery({\n  queryKey: ['user', userId],\n  queryFn: () => fetch('/api/user/' + userId).then(r => r.json()),\n  staleTime: 5 * 60 * 1000, // 5 min\n});\n\nconst qc = useQueryClient();\nconst mutation = useMutation({\n  mutationFn: (data) => fetch('/api/posts', {method:'POST', body: JSON.stringify(data)}),\n  onSuccess: () => qc.invalidateQueries({queryKey: ['posts']}),\n  onMutate: async (newPost) => {\n    // Optimistic update\n    await qc.cancelQueries({queryKey: ['posts']});\n    qc.setQueryData(['posts'], old => [...old, newPost]);\n  }\n});"
+  },
+  {
+    "term": "Code Splitting",
+    "category": "Performance",
+    "def": "Dividir o bundle JS em chunks menores, carregados sob demanda.",
+    "what": "Sem code splitting: todo JS da app é baixado no primeiro load. Com splitting: cada rota/feature tem seu chunk. Browser baixa só o necessário. React.lazy + import() dinâmico implementa no client. Next.js App Router faz por rota automaticamente.",
+    "whenUse": "Rotas secundárias pesadas. Componentes raramente usados (editores, modais complexos, charts). Qualquer feature que não é necessária no primeiro render.",
+    "whenNot": "Componentes pequenos e leves — overhead do chunk não vale. Componentes críticos para o first render (above the fold).",
+    "pros": [
+      "Bundle inicial menor",
+      "Carregamento mais rápido",
+      "LCP melhorado",
+      "Usuário baixa menos no total"
+    ],
+    "cons": [
+      "Chunks extras para baixar depois",
+      "Possível delay na navegação",
+      "Loader states necessários",
+      "Complexidade de build"
+    ],
+    "code": "// React.lazy (client-side)\nconst Editor = lazy(() => import('./Editor'));\n<Suspense fallback={<EditorSkeleton />}><Editor /></Suspense>\n\n// Next.js dynamic (com opções extras)\nconst Map = dynamic(() => import('./Map'), {\n  ssr: false,       // não inclui no SSR\n  loading: () => <MapSkeleton />\n});"
+  },
+  {
+    "term": "Memoization",
+    "category": "Performance",
+    "def": "Cache de resultado para inputs iguais. Evita recomputação e re-renders desnecessários.",
+    "what": "React.memo: memoiza componente (evita re-render). useMemo: memoiza valor (evita recálculo). useCallback: memoiza função (mantém referência estável). Todos têm custo de comparação — use com profiling.",
+    "whenUse": "Componente pesado que recebe props estáveis. Cálculo custoso (>1ms) com deps estáveis. Função passada para componente memoizado.",
+    "whenNot": "Componentes triviais. Props que mudam sempre. Cálculos rápidos. Sem profiling confirmando problema.",
+    "pros": [
+      "Evita trabalho desnecessário",
+      "Melhora FPS em listas",
+      "Estabiliza referências para hooks"
+    ],
+    "cons": [
+      "Custo de comparação",
+      "Over-use piora tudo",
+      "Falsa sensação de segurança",
+      "Código mais complexo"
+    ],
+    "code": "// Os 3 níveis\nconst MemoComponent = React.memo(HeavyComponent);\n\nconst expensiveValue = useMemo(() =>\n  bigArray.filter(complexPredicate), [bigArray]);\n\nconst stableCallback = useCallback((id) =>\n  dispatch({type:'select', id}), [dispatch]);"
+  },
+  {
+    "term": "Debouncing",
+    "category": "Performance",
+    "def": "Atrasa execução de uma função até parar de ser chamada por N ms.",
+    "what": "A cada nova chamada, reinicia o timer. Só executa quando o usuário 'para' de agir. Ideal para search-as-you-type (só busca quando parou de digitar). Diferente de throttle (que limita a frequência).",
+    "whenUse": "Search inputs. Autosave de formulários. Inputs que disparam API calls. Redimensionamento de janela para cálculos pesados.",
+    "whenNot": "Quando o usuário precisa de feedback imediato. Clicks de botão (use disabled state em vez de debounce). Quando throttle é mais apropriado.",
+    "pros": [
+      "Reduz chamadas de API",
+      "Melhora UX (menos 'piscadas')",
+      "Simples de implementar",
+      "Melhora performance de rede"
+    ],
+    "cons": [
+      "Atrasa feedback",
+      "Pode sentir lento se delay muito alto",
+      "Precisa de cleanup para evitar memory leaks"
+    ],
+    "code": "function useDebounce(value, delay = 500) {\n  const [debounced, setDebounced] = useState(value);\n  useEffect(() => {\n    const timer = setTimeout(() => setDebounced(value), delay);\n    return () => clearTimeout(timer);\n  }, [value, delay]);\n  return debounced;\n}\n\nconst debouncedQuery = useDebounce(query, 300);\n// API só é chamada 300ms após parar de digitar\nuseEffect(() => {\n  if (debouncedQuery) searchAPI(debouncedQuery);\n}, [debouncedQuery]);"
+  },
+  {
+    "term": "Virtual Scrolling",
+    "category": "Performance",
+    "def": "Renderiza apenas os itens visíveis. DOM permanece pequeno independente do total.",
+    "what": "Mantém uma 'janela' de itens no DOM (geralmente 15-30). Quando o usuário scrolla, recicla os elementos DOM e atualiza os dados. Sem isso, 10.000 itens = 10.000 nós reais no DOM.",
+    "whenUse": "Listas com 200+ itens onde há lentidão visível. Tabelas com muitas linhas. Grids de imagens grandes. Feeds infinitos.",
+    "whenNot": "Listas pequenas ( menos de 200 itens). Listas que precisam ser indexadas por SEO. Quando a complexidade não é justificada.",
+    "pros": [
+      "DOM sempre pequeno",
+      "FPS consistente",
+      "Funciona com milhões de itens",
+      "Scroll suave"
+    ],
+    "cons": [
+      "Scroll accessibility pode ser afetado",
+      "Altura variável é complexa",
+      "Ctrl+F do browser não funciona",
+      "SEO não indexa itens fora da view"
+    ],
+    "code": "import { FixedSizeList } from 'react-window';\n\n// DOM sempre tem ~15 items, não 100.000\n<FixedSizeList\n  height={600}\n  itemCount={100000}\n  itemSize={52}\n  width=\"100%\"\n>\n  {({ index, style }) => (\n    <div style={style}> {/* style: position absolute */}\n      <Row data={items[index]} />\n    </div>\n  )}\n</FixedSizeList>"
+  },
+  {
+    "term": "LCP",
+    "category": "Métrica",
+    "def": "Largest Contentful Paint. Tempo até o maior elemento visível renderizar. Meta: < 2.5s.",
+    "what": "Mede quando a maior imagem ou bloco de texto visível no viewport termina de renderizar. Proxy para 'quando a página parece carregada'. Afeta SEO.",
+    "whenUse": "Otimizar quando LCP > 2.5s. Prioridade: imagens acima do fold, hero sections, feature images.",
+    "whenNot": "Não é métrica para interatividade — use INP para isso.",
+    "pros": [
+      "Boa proxy de experiência percebida",
+      "Mensurável com web-vitals lib",
+      "Correlação com SEO"
+    ],
+    "cons": [
+      "Não mede interatividade",
+      "Pode ser difícil de melhorar em sites com imagens grandes"
+    ],
+    "code": "// Otimizações para LCP:\n// 1. Next.js Image com priority\n<Image src=\"/hero.jpg\" priority width={1200} height={600} alt=\"hero\" />\n\n// 2. Preload de imagem crítica no head\n<link rel=\"preload\" as=\"image\" href=\"/hero.jpg\" />\n\n// 3. Evitar fetch waterfall — dados server-side\nasync function HeroSection() {\n  const data = await db.hero.get(); // no server, zero latência client\n  return <h1>{data.title}</h1>;\n}"
+  },
+  {
+    "term": "INP",
+    "category": "Métrica",
+    "def": "Interaction to Next Paint. Tempo de resposta de TODAS as interações. Meta: < 200ms. Substituiu FID em 2024.",
+    "what": "Mede o pior percentil de latência de qualquer click/tap/teclado durante a sessão. Diferente do FID (apenas primeira interação), INP é mais rigoroso. Afeta SEO. JavaScript pesado no main thread é o principal culpado.",
+    "whenUse": "Otimizar quando INP > 200ms. Investigar com Chrome DevTools Performance tab.",
+    "whenNot": "Não é relevante para páginas de leitura pura sem interação.",
+    "pros": [
+      "Mais representativo que FID",
+      "Cobre toda a sessão",
+      "Correlação com UX real"
+    ],
+    "cons": [
+      "Mais difícil de otimizar que FID",
+      "Múltiplos pontos de melhoria",
+      "Ferramentas de lab podem não capturar fielmente"
+    ],
+    "code": "// Melhorar INP:\n// 1. startTransition para updates pesados\nstartTransition(() => setFilteredList(heavyFilter(data)));\n\n// 2. Debounce em handlers custosos\nconst handleChange = useDebouncedCallback(heavyHandler, 16);\n\n// 3. Web Worker para cálculos pesados\nworker.postMessage(data);\nworker.onmessage = ({data}) => setState(data);\n\n// 4. Dividir trabalho longo com scheduler\nscheduler.postTask(heavyWork, { priority: 'background' });"
+  },
+  {
+    "term": "CLS",
+    "category": "Métrica",
+    "def": "Cumulative Layout Shift. Soma de layout shifts inesperados. Meta: < 0.1.",
+    "what": "Mede quanto o layout 'pula' inesperadamente durante carregamento. Causas: imagens sem dimensões, anúncios injetados, fontes web, conteúdo carregando após render inicial. Fórmula: impact fraction × distance fraction.",
+    "whenUse": "Otimizar quando usuários relatam conteúdo 'pulando' ou CLS > 0.1 no RUM.",
+    "whenNot": "Não é relevante para apps internos/dashboards sem muito conteúdo externo.",
+    "pros": [
+      "Identifica UX degradada",
+      "Mensurável",
+      "Correlação com frustração do usuário"
+    ],
+    "cons": [
+      "Pode ser causado por terceiros (ads, embeds)",
+      "Difícil de medir corretamente em lab"
+    ],
+    "code": "// ✅ Dimensões explícitas em imagens\n<Image src=\"/foto.jpg\" width={800} height={450} alt=\"\" />\n// Ou CSS:\nimg { aspect-ratio: 16 / 9; width: 100%; }\n\n// ✅ Reservar espaço para conteúdo dinâmico\n<div style={{ minHeight: 200 }}>\n  {data ? <Content /> : <Skeleton />}\n</div>\n\n// ✅ font-display: swap no CSS\n@font-face {\n  font-family: 'Minha Fonte';\n  font-display: swap; /* sem shift de layout */\n}"
+  },
+  {
+    "term": "TTFB",
+    "category": "Métrica",
+    "def": "Time to First Byte. Tempo até o browser receber o primeiro byte do servidor. Meta: < 600ms.",
+    "what": "Inclui: DNS lookup + TCP handshake + TLS + processamento do servidor. Alta TTFB indica servidor lento, DB query sem índice, ou distância geográfica. Afeta todos os outros vitals downstream.",
+    "whenUse": "Sempre monitorar. TTFB alto anula otimizações de frontend.",
+    "whenNot": "Não é a única métrica — TTFB baixo com bundle gigante ainda dá LCP alto.",
+    "pros": [
+      "Fácil de medir",
+      "Identifica problemas de servidor",
+      "Base para todo o resto"
+    ],
+    "cons": [
+      "Afetado por geolocalização (CDN resolve)",
+      "Não mede experiência do usuário diretamente"
+    ],
+    "code": "// Reduzir TTFB:\n// 1. Edge/CDN (Vercel, Cloudflare)\nexport const runtime = 'edge'; // roda perto do usuário\n\n// 2. Cache de dados pesados\nconst data = unstable_cache(\n  async () => db.getHeavyData(),\n  ['heavy'],\n  { revalidate: 3600 }\n);\n\n// 3. Streaming (first byte chega antes de tudo)\n// React Suspense + RSC ativa streaming automaticamente"
+  },
+  {
+    "term": "XSS",
+    "category": "Segurança",
+    "def": "Cross-Site Scripting. Injeção de JavaScript malicioso em página confiável.",
+    "what": "Tipos: Stored (script salvo no DB), Reflected (via URL), DOM-based (manipulação client-side). JSX auto-escapa {}, mas dangerouslySetInnerHTML, href/src, e eval() são vetores de risco.",
+    "whenUse": "Defender: sempre. Em todo input de usuário que pode ser renderizado como HTML.",
+    "whenNot": "Não é uma feature — é uma vulnerabilidade a evitar.",
+    "pros": [
+      "N/A — é ameaça"
+    ],
+    "cons": [
+      "Roubo de cookies/tokens",
+      "Keylogging",
+      "Ações em nome do usuário",
+      "Redirecionamento malicioso"
+    ],
+    "code": "// ❌ Vulnerável\n<div dangerouslySetInnerHTML={{ __html: userInput }} />\n// userInput: <img src=x onerror=\"roubaCookies()\">\n\n// ✅ Sanitizado\nimport DOMPurify from 'dompurify';\nconst clean = DOMPurify.sanitize(userInput);\n<div dangerouslySetInnerHTML={{ __html: clean }} />\n\n// ✅ JSX auto-escapa (seguro por padrão)\n<div>{userInput}</div> // \"<script>\" vira texto literal"
+  },
+  {
+    "term": "CSRF",
+    "category": "Segurança",
+    "def": "Cross-Site Request Forgery. Site malicioso dispara ação em seu site usando cookies do usuário.",
+    "what": "Browser envia cookies automaticamente em todo request. Site mal-intencionado faz form POST para seu site. Servidor recebe cookies válidos e executa a ação. SameSite=Lax/Strict e CSRF tokens previnem.",
+    "whenUse": "Proteger: todo endpoint de mutação (POST, PUT, DELETE).",
+    "whenNot": "N/A — sempre proteja endpoints de mutação.",
+    "pros": [
+      "N/A — é ameaça"
+    ],
+    "cons": [
+      "Transações não autorizadas",
+      "Mudança de dados",
+      "Ações em nome do usuário sem consentimento"
+    ],
+    "code": "// Proteção via SameSite\ncookies().set('session', token, {\n  sameSite: 'lax',   // bloqueia cross-site POST/fetch\n  httpOnly: true,\n  secure: true,\n});\n\n// Server Actions têm proteção automática\n// (Next.js verifica Origin header)\n\n// CSRF Token manual (forms tradicionais)\nconst csrfToken = crypto.randomUUID();\n<input type=\"hidden\" name=\"csrf\" value={csrfToken} />"
+  },
+  {
+    "term": "CORS",
+    "category": "Segurança",
+    "def": "Cross-Origin Resource Sharing. Browser bloqueia requests cross-origin por padrão. Servidor pode liberar via headers.",
+    "what": "Browser implementa Same-Origin Policy. Para APIs acessadas de outras origens, servidor envia Access-Control-Allow-Origin. Preflight OPTIONS verifica permissões antes de requests complexas. CORS é do servidor, não do cliente.",
+    "whenUse": "Sempre que sua API for consumida por frontend em domínio diferente.",
+    "whenNot": "Same-origin (mesmo host/porta/protocolo) — sem necessidade. CORS com * em APIs privadas é má prática.",
+    "pros": [
+      "N/A — é mecanismo de segurança necessário"
+    ],
+    "cons": [
+      "Configuração errada expõe API",
+      "Preflight adiciona latência",
+      "Difícil de debugar"
+    ],
+    "code": "// Route Handler no Next.js\nexport async function GET() {\n  return new Response(JSON.stringify({data}), {\n    headers: {\n      'Content-Type': 'application/json',\n      'Access-Control-Allow-Origin': 'https://meuapp.com',\n      'Access-Control-Allow-Methods': 'GET, POST',\n    }\n  });\n}\n\n// next.config.js - CORS global\nasync headers() {\n  return [{ source: '/api/:path*', headers: [\n    { key: 'Access-Control-Allow-Origin', value: 'https://meuapp.com' }\n  ]}];\n}"
+  },
+  {
+    "term": "CSP",
+    "category": "Segurança",
+    "def": "Content Security Policy. Header HTTP que restringe o que pode executar na página.",
+    "what": "Define allowlist de sources para scripts, styles, imagens, fonts, etc. Bloqueia inline scripts sem nonce. Previne execução mesmo se XSS ocorrer. Implementação: Content-Security-Policy header ou meta tag.",
+    "whenUse": "Em toda aplicação de produção com dados sensíveis. Com Report-Only primeiro para detectar violações.",
+    "whenNot": "Nunca como única defesa — use junto com sanitização, SameSite, HttpOnly.",
+    "pros": [
+      "Defesa em profundidade",
+      "Bloqueia XSS mesmo se sanitização falha",
+      "Relatórios de violação",
+      "Afeta SEO positivamente (confiança)"
+    ],
+    "cons": [
+      "Complexo de configurar",
+      "Pode quebrar libs de terceiros",
+      "Inline scripts precisam de nonces",
+      "CDNs precisam ser whitelistadas"
+    ],
+    "code": "// next.config.js\nconst nonce = Buffer.from(crypto.randomUUID()).toString('base64');\nconst csp = `\n  default-src 'self';\n  script-src 'self' 'nonce-${nonce}' 'strict-dynamic';\n  style-src 'self' 'unsafe-inline';\n  img-src 'self' data: https:;\n  connect-src 'self' https://api.seusite.com;\n`.replace(/\\n/g, ' ');\n\nheaders: [{ key: 'Content-Security-Policy', value: csp }]"
+  },
+  {
+    "term": "HttpOnly",
+    "category": "Segurança",
+    "def": "Flag de cookie que impede acesso via JavaScript. Protege contra roubo de token por XSS.",
+    "what": "Com HttpOnly, document.cookie não consegue ler o cookie. Apenas o browser o envia automaticamente em requests HTTP. Tokens de autenticação SEMPRE devem ter HttpOnly.",
+    "whenUse": "Todos os cookies de sessão/auth. JWT armazenado em cookie. Qualquer cookie sensível.",
+    "whenNot": "Cookies que o JavaScript do cliente precisar ler (ex: preferências de UI sem dados sensíveis). Mas prefira sempre HttpOnly e leia do servidor quando necessário.",
+    "pros": [
+      "Mitiga roubo de token via XSS",
+      "Simples de implementar",
+      "Zero custo de performance"
+    ],
+    "cons": [
+      "JS não pode ler (intencional)",
+      "Não previne CSRF sozinho",
+      "Precisa de SameSite junto"
+    ],
+    "code": "// ✅ Cookie seguro completo\ncookies().set('auth-token', jwt, {\n  httpOnly: true,   // JS não acessa\n  secure: true,     // só HTTPS\n  sameSite: 'lax',  // previne CSRF\n  path: '/',\n  maxAge: 60 * 60 * 24 * 7, // 7 dias\n});\n\n// ❌ localStorage — VULNERÁVEL a XSS\nlocalStorage.setItem('token', jwt); // script malicioso lê"
+  },
+  {
+    "term": "SameSite",
+    "category": "Segurança",
+    "def": "Flag de cookie que controla envio em requests cross-site. Principal defesa contra CSRF.",
+    "what": "Strict: nunca enviado em cross-site (quebra OAuth, links externos). Lax: enviado em navegação top-level (links), mas não em cross-site POST/fetch/img. None: sempre enviado (precisa Secure=true). Lax é o default moderno e sweet spot.",
+    "whenUse": "Sempre em cookies de sessão/auth. Lax para 99% dos casos. Strict quando segurança máxima e sem fluxos OAuth.",
+    "whenNot": "None apenas em cookies de terceiros que precisam ser cross-site (ex: embed, widget).",
+    "pros": [
+      "Previne CSRF efetivamente",
+      "Simples de configurar",
+      "Default Lax nos browsers modernos"
+    ],
+    "cons": [
+      "Strict pode quebrar OAuth e links externos",
+      "None exige Secure, expõe mais em HTTP"
+    ],
+    "code": "// Lax — sweet spot para auth\n{ sameSite: 'lax', httpOnly: true, secure: true }\n\n// Strict — máxima segurança (cuidado com OAuth)\n{ sameSite: 'strict', httpOnly: true, secure: true }\n\n// None — apenas para terceiros com cross-site necessário\n{ sameSite: 'none', secure: true } // Secure obrigatório"
+  },
+  {
+    "term": "Web Worker",
+    "category": "Browser",
+    "def": "Thread JavaScript separada do main thread. Para cálculos pesados sem travar a UI.",
+    "what": "JavaScript é single-threaded. Web Workers permitem código em threads separadas. Sem acesso ao DOM. Comunicação via postMessage/onmessage. Ideal para: parsing de JSON grande, criptografia, image processing, cálculos intensivos.",
+    "whenUse": "Cálculos que demoram >16ms (trava 1 frame). Parsing de arquivos grandes. Criptografia. Algoritmos intensivos que precisam rodar no cliente.",
+    "whenNot": "Operações que precisam do DOM. Quando server-side é mais adequado. Para lógica simples.",
+    "pros": [
+      "Sem travar UI",
+      "Thread dedicada",
+      "Parallelismo real no browser",
+      "Comlink simplifica comunicação"
+    ],
+    "cons": [
+      "Sem acesso ao DOM",
+      "Comunicação por cópia (overhead em dados grandes)",
+      "Setup mais verbose",
+      "SharedArrayBuffer tem restrições de CORS"
+    ],
+    "code": "// worker.js\nself.onmessage = ({ data }) => {\n  const result = data.map(heavyProcess); // thread separada\n  self.postMessage(result);\n};\n\n// Componente React\nuseEffect(() => {\n  const worker = new Worker(new URL('./worker.js', import.meta.url));\n  worker.onmessage = ({ data }) => setResult(data);\n  worker.postMessage(bigDataset);\n  return () => worker.terminate();\n}, []);"
+  },
+  {
+    "term": "Service Worker",
+    "category": "Browser",
+    "def": "Worker especial que roda em background, intercepta requests. Base de PWA e offline support.",
+    "what": "Roda separado da página, persiste mesmo com página fechada. Intercepta fetch requests (cache strategy). Recebe push notifications. Background sync. Workbox é a lib padrão para Service Workers.",
+    "whenUse": "PWA (Progressive Web App). Suporte offline. Cache de assets/API. Push notifications. Background sync.",
+    "whenNot": "Apps que não precisam de offline. Quando a complexidade não vale. Apenas HTTPS (restrição obrigatória).",
+    "pros": [
+      "Offline support",
+      "Cache granular",
+      "Push notifications",
+      "Background tasks"
+    ],
+    "cons": [
+      "Só HTTPS",
+      "Ciclo de vida complexo",
+      "Bugs de cache difíceis de debugar",
+      "Precisa de cuidado com invalidação"
+    ],
+    "code": "// Registrar Service Worker\nif ('serviceWorker' in navigator) {\n  navigator.serviceWorker.register('/sw.js');\n}\n\n// sw.js — cache-first strategy\nself.addEventListener('fetch', (event) => {\n  event.respondWith(\n    caches.match(event.request).then(cached => {\n      return cached || fetch(event.request);\n    })\n  );\n});"
+  },
+  {
+    "term": "IntersectionObserver",
+    "category": "Browser",
+    "def": "API nativa que detecta quando elemento entra ou sai do viewport. Eficiente, sem scroll listener.",
+    "what": "Observa elementos DOM e chama callback quando visibilidade muda. Threshold configura quanto do elemento precisa estar visível. Muito mais performático que window.addEventListener('scroll') com getBoundingClientRect().",
+    "whenUse": "Lazy loading de imagens. Infinite scroll. Animações on-scroll. Analytics de visibilidade. Virtualization manual.",
+    "whenNot": "Quando IntersectionObserver API não está disponível (legado — mas suporte é >96%). Para detecção de scroll position exata.",
+    "pros": [
+      "Nativo e eficiente",
+      "Sem scroll listeners pesados",
+      "Configurável (threshold, root)",
+      "Async — não bloqueia main thread"
+    ],
+    "cons": [
+      "Async — não é pixel-perfect",
+      "Não dá posição exata do scroll",
+      "Não disponível em SSR"
+    ],
+    "code": "function LazyImage({ src, alt }) {\n  const ref = useRef(null);\n  const [visible, setVisible] = useState(false);\n\n  useEffect(() => {\n    const obs = new IntersectionObserver(\n      ([entry]) => { if (entry.isIntersecting) setVisible(true); },\n      { threshold: 0.1 }\n    );\n    obs.observe(ref.current);\n    return () => obs.disconnect();\n  }, []);\n\n  return <img ref={ref} src={visible ? src : undefined} alt={alt} />;\n}"
+  }
+]

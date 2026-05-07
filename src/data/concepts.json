@@ -1,0 +1,1298 @@
+[
+  {
+    "id": 1,
+    "emoji": "🧠",
+    "title": "React.memo + areEqual",
+    "level": "Performance",
+    "color": "#818cf8",
+    "summary": "Evita re-renders comparando props por valor, não por referência.",
+    "definition": "React.memo é um Higher-Order Component (HOC) que memoiza um componente funcional. Por padrão, faz comparação rasa (===) das props. O segundo argumento (areEqual) permite comparação customizada — útil quando props são objetos/arrays.",
+    "problem": "Componente re-renderiza mesmo que os dados não mudaram — apenas a referência do objeto mudou.",
+    "solution": "Usar React.memo com função areEqual customizada para comparar valores reais, não referências.",
+    "tip": "Use areEqual customizado quando suas props são objetos ou arrays. Para primitivos, React.memo padrão já basta.",
+    "questions": [
+      {
+        "q": "Qual a diferença entre React.memo, useMemo e useCallback?",
+        "a": "React.memo memoiza o COMPONENTE inteiro (evita re-render). useMemo memoiza um VALOR computado (cache de cálculo). useCallback memoiza uma FUNÇÃO (mantém a mesma referência entre renders). Os três usam comparação rasa por padrão."
+      },
+      {
+        "q": "React.memo sempre melhora performance?",
+        "a": "Não. Tem custo próprio (a comparação roda a cada render do pai). Se o componente é trivial ou recebe props sempre diferentes, memo piora a performance. Sempre meça com React Profiler antes de aplicar."
+      },
+      {
+        "q": "O que é comparação rasa?",
+        "a": "Comparação por referência (===) para objetos/arrays e por valor para primitivos. { a: 1 } === { a: 1 } é false (referências diferentes), mas 1 === 1 é true."
+      }
+    ],
+    "code": "// ❌ Problema: novo objeto a cada render = nova ref = re-render\nconst user = { name: \"Felipe\" }; // recriado todo render\n\n// ✅ Solução: React.memo + comparador de valor\nconst UserCard = React.memo(\n  ({ user }) => <div>{user.name}</div>,\n\n  (prevProps, nextProps) => {\n    // true = NÃO re-renderiza\n    return prevProps.user.name === nextProps.user.name\n        && prevProps.user.id === nextProps.user.id;\n  }\n);"
+  },
+  {
+    "id": 2,
+    "emoji": "⚡",
+    "title": "startTransition",
+    "level": "React 18",
+    "color": "#fbbf24",
+    "summary": "Marca updates como não-urgentes para manter a UI responsiva durante cálculos pesados.",
+    "definition": "startTransition é uma API do React 18 (Concurrent) que marca atualizações de estado como não-urgentes. O React pode interromper essas atualizações se uma mais urgente chegar (ex: digitação), mantendo a UI responsiva.",
+    "problem": "Filtrar lista enorme ao digitar trava o input — o React processa tudo como urgente.",
+    "solution": "Envolver o update pesado em startTransition. O React pode interrompê-lo para priorizar a digitação.",
+    "tip": "Urgente: digitação, cliques, animações. Não-urgente: filtros pesados, navegação de dados.",
+    "questions": [
+      {
+        "q": "Diferença entre startTransition e useTransition?",
+        "a": "useTransition é o hook que retorna [isPending, startTransition]. O isPending permite mostrar feedback visual (spinner, opacity). startTransition (sem hook) é a função pura, usada quando você não precisa de feedback."
+      },
+      {
+        "q": "startTransition substitui debounce?",
+        "a": "Não totalmente. Debounce ATRASA a execução. startTransition EXECUTA imediatamente mas em prioridade baixa, podendo ser interrompido. Para network calls (API), debounce ainda é melhor. Para filtros locais pesados, startTransition é mais responsivo."
+      },
+      {
+        "q": "Por que digitação não pode ser wrapped em startTransition?",
+        "a": "Porque o usuário precisa ver o caractere imediatamente. Marcar como não-urgente faria a UI parecer travada. Inputs controlados sempre devem ser updates urgentes."
+      }
+    ],
+    "code": "import { startTransition, useState, useTransition } from 'react';\n\nfunction Busca({ data }) {\n  const [query, setQuery] = useState('');\n  const [resultado, setResultado] = useState(data);\n  const [isPending, startTransition] = useTransition();\n\n  const handleChange = (e) => {\n    setQuery(e.target.value); // urgente\n\n    startTransition(() => {\n      setResultado(heavyFilter(data, e.target.value)); // não-urgente\n    });\n  };\n\n  return (\n    <>\n      <input value={query} onChange={handleChange} />\n      {isPending && <Spinner />}\n      <Lista items={resultado} />\n    </>\n  );\n}"
+  },
+  {
+    "id": 3,
+    "emoji": "🖥️",
+    "title": "document.cookie em RSC",
+    "level": "Next.js RSC",
+    "color": "#34d399",
+    "summary": "Server Components rodam no Node.js — não existe `document` ou qualquer browser API neles.",
+    "definition": "Server Components (RSC) são componentes que renderizam exclusivamente no servidor. Eles não têm acesso a browser APIs (window, document, localStorage). Para cookies, o Next.js fornece a função cookies() do next/headers.",
+    "problem": "Tentar ler document.cookie num Server Component causa ReferenceError: document is not defined.",
+    "solution": "Usar cookies() do next/headers em Server Components. document só existe no browser.",
+    "tip": "Regra: Server Component = servidor = sem window, document, navigator, localStorage, etc.",
+    "questions": [
+      {
+        "q": "Como compartilhar cookies entre Server e Client Components?",
+        "a": "O servidor lê via cookies() do next/headers e passa o valor como prop para o Client Component. Cookies HttpOnly não são acessíveis no client mesmo — precisam vir do servidor."
+      },
+      {
+        "q": "Server Components podem usar useState?",
+        "a": "Não. Server Components não têm hooks de estado (useState, useEffect, useReducer, useContext). São completamente sem estado e renderizados apenas uma vez no servidor."
+      },
+      {
+        "q": "Como detectar se estou em Server ou Client em runtime?",
+        "a": "typeof window === 'undefined' indica servidor. Mas em RSC isso é desnecessário — o tipo de componente é definido na arquitetura ('use client' ou ausência dele), não em runtime."
+      }
+    ],
+    "code": "// ❌ ERRO em Server Component\nexport default async function Page() {\n  const token = document.cookie; // ReferenceError!\n}\n\n// ✅ Correto em Server Component\nimport { cookies } from 'next/headers';\n\nexport default async function Page() {\n  const cookieStore = cookies();\n  const token = cookieStore.get('auth-token');\n  return <div>Olá, {token?.value}</div>;\n}\n\n// ✅ document.cookie funciona em Client Component\n'use client';\nexport function ClientComp() {\n  useEffect(() => {\n    const val = document.cookie; // OK no browser\n  }, []);\n}"
+  },
+  {
+    "id": 4,
+    "emoji": "🌊",
+    "title": "useDeferredValue (Tearing)",
+    "level": "React 18",
+    "color": "#a78bfa",
+    "summary": "Mantém uma versão 'atrasada' do valor enquanto o React processa em background, evitando tearing.",
+    "definition": "useDeferredValue é um hook que retorna uma versão 'defasada' de um valor. O React mantém o valor anterior estável enquanto processa o novo em prioridade baixa, evitando tearing (estados visuais inconsistentes).",
+    "problem": "Tearing: partes da UI mostram valores diferentes durante renders pesados — estado visual inconsistente.",
+    "solution": "useDeferredValue mantém o valor anterior estável enquanto o novo processa — sem estado partido.",
+    "tip": "useDeferredValue = para valores que alimentam renders pesados (filtros, listas, gráficos).",
+    "questions": [
+      {
+        "q": "useDeferredValue vs useTransition — qual usar?",
+        "a": "useTransition quando você CONTROLA o setState (envolve a chamada). useDeferredValue quando recebe o valor de fora (props, contexto) e não pode envolver o setState."
+      },
+      {
+        "q": "O que é tearing no React?",
+        "a": "Estado visual inconsistente onde diferentes partes do componente mostram valores de versões diferentes do estado durante renders concorrentes. O Concurrent Mode pode interromper renders, e sem cuidado, partes podem ficar 'rasgadas'."
+      },
+      {
+        "q": "useDeferredValue substitui debounce de input?",
+        "a": "Pra renders pesados sim, é melhor. Pra calls de API ainda use debounce — useDeferredValue não atrasa execução, só prioriza."
+      }
+    ],
+    "code": "function ListaFiltrada({ filtro }) {\n  const filtroDeferido = useDeferredValue(filtro);\n\n  const resultado = useMemo(\n    () => heavyFilter(data, filtroDeferido),\n    [filtroDeferido]\n  );\n\n  const isUpdating = filtro !== filtroDeferido;\n\n  return (\n    <div style={{ opacity: isUpdating ? 0.6 : 1 }}>\n      <Lista items={resultado} />\n    </div>\n  );\n}"
+  },
+  {
+    "id": 5,
+    "emoji": "🎯",
+    "title": "Suspense Boundaries",
+    "level": "Padrão",
+    "color": "#f472b6",
+    "summary": "Múltiplos Suspense próximos dos dados = loading independente por área, sem bloquear a página.",
+    "definition": "Suspense é um componente que captura promises que ainda não resolveram, mostrando um fallback (skeleton, spinner) até que resolvam. Funciona com lazy loading, RSC streaming e libs como React Query (com suspense:true).",
+    "problem": "Um único Suspense no topo bloqueia a página inteira enquanto qualquer componente carrega.",
+    "solution": "Colocar Suspense ao redor de cada área que carrega dados — granularidade máxima.",
+    "tip": "Cada Suspense boundary = área independente. Mais granular = melhor UX. Nunca um só no topo.",
+    "questions": [
+      {
+        "q": "Como Suspense detecta que está esperando?",
+        "a": "Componentes filhos 'lançam' uma Promise (throw promise). Suspense captura via try/catch interno do React e renderiza o fallback até a Promise resolver. Libs como React Query e RSC fazem isso por baixo dos panos."
+      },
+      {
+        "q": "Suspense funciona com fetch tradicional em useEffect?",
+        "a": "Não diretamente. Suspense precisa de uma fonte que 'suspenda' (lance Promise). Para useEffect tradicional, você implementa loading manual. Para Suspense, use libs (React Query, SWR, Relay) ou RSC."
+      },
+      {
+        "q": "O que acontece se um Suspense falha?",
+        "a": "Suspense só lida com loading. Pra erros, combine com ErrorBoundary. O padrão é: <ErrorBoundary><Suspense fallback={...}>...</Suspense></ErrorBoundary>"
+      }
+    ],
+    "code": "<Layout>\n  <Suspense fallback={<HeaderSkeleton />}>\n    <Header />\n  </Suspense>\n\n  <Suspense fallback={<FeedSkeleton />}>\n    <Feed />\n  </Suspense>\n\n  <Suspense fallback={<SidebarSkeleton />}>\n    <Sidebar />\n  </Suspense>\n</Layout>"
+  },
+  {
+    "id": 6,
+    "emoji": "🚫",
+    "title": "Over-memoização",
+    "level": "Performance",
+    "color": "#fb923c",
+    "summary": "useMemo em primitivos é puro desperdício — strings, numbers e booleans já são comparados por valor.",
+    "definition": "Over-memoização é o uso excessivo de useMemo/useCallback/React.memo em casos onde o custo da memoização supera o benefício. Cada memoização tem custo de comparação e armazenamento — usar onde não há ganho real piora a performance.",
+    "problem": "Usar useMemo em valores que o React já compara nativamente adiciona custo sem nenhum benefício.",
+    "solution": "Memoizar apenas objetos, arrays e cálculos genuinamente custosos.",
+    "tip": "Regra: primitivo estável? Sem memo. Objeto/array/cálculo > ~5ms? Memo vale.",
+    "questions": [
+      {
+        "q": "Quando useCallback é desnecessário?",
+        "a": "Quando a função não é passada como prop para componentes memoizados, nem é dependência de outro hook. Em handlers locais (onClick), useCallback é puro overhead."
+      },
+      {
+        "q": "O React Forget vai resolver isso?",
+        "a": "Sim. React Compiler (ex-React Forget) memoiza automaticamente componentes e hooks em compile-time. Quando estável, useMemo/useCallback manuais se tornarão raros."
+      },
+      {
+        "q": "Como medir se memo está ajudando?",
+        "a": "React DevTools Profiler. Compare 'tempo de render' antes e depois. Se as props nunca mudam de valor mas mudam de referência, memo ajuda. Se mudam sempre, memo só adiciona custo."
+      }
+    ],
+    "code": "// ❌ Over-memoização inútil\nconst nome = useMemo(() => \"Felipe\", []);\nconst ativo = useMemo(() => true, []);\n\n// ✅ Memo que justifica\nconst listaFiltrada = useMemo(\n  () => items.filter(i => i.active).sort(...),\n  [items]\n);"
+  },
+  {
+    "id": 7,
+    "emoji": "🔒",
+    "title": "XSS + dangerouslySetInnerHTML",
+    "level": "Segurança",
+    "color": "#f87171",
+    "summary": "HTML externo DEVE ser sanitizado. Escapar só <script> não basta — XSS vem de dezenas de vetores.",
+    "definition": "XSS (Cross-Site Scripting) é a injeção de código JavaScript malicioso em uma página confiável. dangerouslySetInnerHTML é a API do React para inserir HTML cru — perigosa porque bypassa a proteção automática do JSX.",
+    "problem": "dangerouslySetInnerHTML sem sanitização permite injeção de scripts via onerror, onclick, href=javascript: etc.",
+    "solution": "Sanitizar com DOMPurify antes de renderizar. Limitar dangerouslySetInnerHTML a casos necessários.",
+    "tip": "DOMPurify.sanitize() remove todos os vetores conhecidos de XSS. Sempre use antes de innerHTML.",
+    "questions": [
+      {
+        "q": "JSX é seguro contra XSS?",
+        "a": "Sim, por padrão. {variavel} sempre escapa HTML automaticamente. <script> em string vira texto literal. Apenas dangerouslySetInnerHTML, eval(), e injeções via href/src bypassam isso."
+      },
+      {
+        "q": "O que é CSP e como ajuda?",
+        "a": "Content Security Policy é um header HTTP que restringe quais scripts/recursos podem executar. CSP bem configurada bloqueia XSS mesmo se a sanitização falhar — defesa em camadas."
+      },
+      {
+        "q": "Quais são os 3 tipos de XSS?",
+        "a": "1) Stored (script salvo no banco e renderizado para todos), 2) Reflected (script via URL params refletido), 3) DOM-based (manipulação client-side perigosa). DOMPurify protege contra todos."
+      }
+    ],
+    "code": "import DOMPurify from 'dompurify';\n\n// ✅ SEGURO\nfunction ConteudoSeguro({ html }) {\n  const limpo = DOMPurify.sanitize(html);\n  return <div dangerouslySetInnerHTML={{ __html: limpo }} />;\n}"
+  },
+  {
+    "id": 8,
+    "emoji": "📋",
+    "title": "Virtualização de Listas",
+    "level": "Performance",
+    "color": "#2dd4bf",
+    "summary": "Renderizar apenas os itens visíveis no viewport — não todos os 10.000 de uma vez no DOM.",
+    "definition": "Virtualização (windowing) é a técnica de renderizar apenas os itens visíveis de uma lista grande. Mantém uma 'janela' (window) de itens no DOM e atualiza conforme o scroll. Bibliotecas: react-window, react-virtualized, TanStack Virtual.",
+    "problem": "10.000 itens = 10.000 nós reais no DOM = browser travado no scroll e na renderização.",
+    "solution": "react-window ou react-virtualized renderiza apenas ~15 itens visíveis, independente do total.",
+    "tip": "Para listas > 200 itens com lentidão visível: virtualização é sempre o primeiro passo.",
+    "questions": [
+      {
+        "q": "react-window vs react-virtualized?",
+        "a": "react-window é a versão moderna, mais leve e simples (mesmo autor). react-virtualized tem mais features (grid, masonry) mas é maior. Para 90% dos casos, use react-window."
+      },
+      {
+        "q": "Como virtualização afeta SEO?",
+        "a": "Negativamente — só os itens visíveis estão no DOM. Para listas que precisam ser indexadas (ex: produtos), prefira paginação tradicional ou SSR sem virtualização. Use virtualização apenas em listas internas/dashboards."
+      },
+      {
+        "q": "Como lidar com itens de altura variável?",
+        "a": "react-window oferece VariableSizeList. TanStack Virtual mede automaticamente. A lógica é mais complexa — precisa do tamanho de cada item antes de renderizar (ou medir dinamicamente)."
+      }
+    ],
+    "code": "import { FixedSizeList } from 'react-window';\n\n<FixedSizeList\n  height={600}\n  itemCount={10000}\n  itemSize={56}\n  width=\"100%\"\n>\n  {({ index, style }) => (\n    <div style={style}>\n      <ItemRow data={items[index]} />\n    </div>\n  )}\n</FixedSizeList>"
+  },
+  {
+    "id": 9,
+    "emoji": "🔄",
+    "title": "Deps instáveis no useEffect",
+    "level": "Hooks",
+    "color": "#60a5fa",
+    "summary": "Objetos/arrays criados inline são novos a cada render — colocá-los nas deps causa loop infinito.",
+    "definition": "O array de dependências do useEffect compara valores via Object.is (similar a ===). Objetos/arrays criados inline têm nova referência a cada render, fazendo o effect re-executar mesmo sem mudança real de valor.",
+    "problem": "options = { limit: 10 } dentro do componente: novo objeto todo render = nova referência = effect re-executa sempre.",
+    "solution": "Estabilizar com useMemo, usar valores primitivos nas deps, ou mover a constante para fora.",
+    "tip": "setters do useState (setData, setLoading) são estáveis por garantia do React — não precisam estar nas deps.",
+    "questions": [
+      {
+        "q": "Por que array vazio [] como deps tem warning do ESLint?",
+        "a": "O exhaustive-deps quer que todas as variáveis externas usadas no effect estejam declaradas nas deps. [] indica 'rodar só uma vez' mas se o effect usa props/state, eles podem ficar stale (desatualizados)."
+      },
+      {
+        "q": "Quando usar [] vazio é correto?",
+        "a": "Quando o effect realmente não depende de nenhum valor externo: setup de subscriptions globais, listeners do window/document, inicialização de bibliotecas. Mesmo assim, certifique-se que callbacks dentro são estáveis."
+      },
+      {
+        "q": "Como evitar effect rodando duas vezes em dev?",
+        "a": "Em StrictMode (dev), effects rodam duas vezes para detectar bugs. Não tente 'evitar' — ajuste o cleanup para ser idempotente. Em produção, roda apenas uma vez."
+      }
+    ],
+    "code": "// ✅ Solução 1: primitivos nas deps\nuseEffect(() => {\n  fetchData(query, { limit: 10 }).then(setData);\n}, [query]);\n\n// ✅ Solução 2: useMemo\nconst options = useMemo(() => ({ limit: 10 }), []);\n\n// ✅ Solução 3: constante fora\nconst OPTIONS = { limit: 10 };"
+  },
+  {
+    "id": 10,
+    "emoji": "🌐",
+    "title": "SSR Streaming + Suspense",
+    "level": "Next.js",
+    "color": "#38bdf8",
+    "summary": "O servidor envia HTML em chunks — partes prontas chegam imediatamente enquanto as lentas mostram skeleton.",
+    "definition": "SSR Streaming envia o HTML em pedaços via Transfer-Encoding: chunked. Cada Suspense boundary vira um chunk independente. O navegador renderiza progressivamente. Combinado com Selective Hydration, melhora drasticamente TTFB e FCP.",
+    "problem": "SSR tradicional segura o HTML inteiro até todos os dados estarem prontos — TTFB alto.",
+    "solution": "Streaming: cada Suspense boundary vira um chunk independente enviado conforme fica pronto.",
+    "tip": "No Next.js App Router, async Server Components + Suspense ativam streaming automaticamente.",
+    "questions": [
+      {
+        "q": "Como streaming melhora Web Vitals?",
+        "a": "Reduz TTFB (server pode começar a responder antes de todos os dados). Reduz FCP (browser pinta a primeira parte rapidamente). Não afeta LCP diretamente, mas melhora a percepção de carregamento."
+      },
+      {
+        "q": "O que é Selective Hydration?",
+        "a": "Hidratação seletiva: o React 18 hidrata partes da página independentemente, conforme cada chunk chega. Permite o usuário interagir com a parte de cima enquanto o resto ainda hidrata."
+      },
+      {
+        "q": "Streaming funciona em todos os hosts?",
+        "a": "Precisa de runtime que suporte HTTP streaming. Vercel, Cloudflare, Netlify suportam. Alguns CDNs/proxies fazem buffering e quebram o streaming — verifique a documentação do seu host."
+      }
+    ],
+    "code": "export default function Page() {\n  return (\n    <main>\n      <Header />\n      <Suspense fallback={<FeedSkeleton />}>\n        <Feed />\n      </Suspense>\n      <Suspense fallback={<RecomendSkeleton />}>\n        <Recomendacoes />\n      </Suspense>\n    </main>\n  );\n}\n\nasync function Feed() {\n  const posts = await db.getPosts();\n  return posts.map(p => <Post key={p.id} post={p} />);\n}"
+  },
+  {
+    "id": 11,
+    "emoji": "💡",
+    "title": "React.memo — quando NÃO usar",
+    "level": "Performance",
+    "color": "#a3e635",
+    "summary": "Componentes muito leves custam mais para memoizar do que para re-renderizar normalmente.",
+    "definition": "React.memo tem um custo computacional próprio: a comparação de props executa a cada render do componente pai. Para componentes triviais ou que recebem props que mudam constantemente, esse custo supera o benefício.",
+    "problem": "React.memo tem custo próprio: comparação de props a cada render do pai. Para componentes triviais, esse custo supera o benefício.",
+    "solution": "Só memoizar componentes pesados que recebem as mesmas props com frequência.",
+    "tip": "Meça com React Profiler antes de memoizar. Muitas vezes o problema está no pai, não no filho.",
+    "questions": [
+      {
+        "q": "Como descobrir se um componente precisa de memo?",
+        "a": "React DevTools Profiler → 'Record why each component rendered'. Se aparece 'Props changed: ' com props que poderiam ser estáveis, memo + estabilizar refs ajuda. Se 'Hooks changed' ou 'Parent rendered', memo não resolve."
+      },
+      {
+        "q": "Componente com children sempre quebra memo?",
+        "a": "Se children for JSX inline, sim — JSX é objeto novo a cada render. Solução: passar children memoizados via useMemo, ou usar context para evitar passar via props."
+      },
+      {
+        "q": "Memo + useCallback é overkill?",
+        "a": "Frequentemente sim. Use só quando profiling mostra ganho real. Em apps pequenos/médios, geralmente não há diferença perceptível e o código fica mais difícil de ler."
+      }
+    ],
+    "code": "// ❌ Memo desnecessário\nconst Badge = React.memo(({ count }) => (\n  <span>{count}</span>\n));\n\n// ✅ Memo que justifica\nconst DataTable = React.memo(({ rows, columns }) => (\n  <table>{/* ...50ms de render */}</table>\n));"
+  },
+  {
+    "id": 12,
+    "emoji": "📝",
+    "title": "Formulários Lentos",
+    "level": "Performance",
+    "color": "#fbbf24",
+    "summary": "Dividir em seções memoizadas isola re-renders — apenas a seção do campo alterado re-renderiza.",
+    "definition": "Formulários complexos sofrem com re-render em cascata: ao digitar em um campo, todos os outros re-renderizam. A solução é isolar campos em componentes memoizados ou usar bibliotecas que isolam re-render por campo (react-hook-form).",
+    "problem": "Formulário com 50 campos: cada keystroke re-renderiza todos os 50 campos desnecessariamente.",
+    "solution": "Agrupar campos em seções com React.memo. Ao digitar em uma seção, apenas ela re-renderiza.",
+    "tip": "Alternativa ainda melhor: react-hook-form — isola re-renders por campo nativamente, sem memo manual.",
+    "questions": [
+      {
+        "q": "react-hook-form vs Formik?",
+        "a": "react-hook-form usa refs (uncontrolled), evitando re-render por keystroke. Formik usa state controlado, re-render em cada digitação. RHF é significativamente mais performático em forms grandes."
+      },
+      {
+        "q": "Como validar sem re-render?",
+        "a": "Validação com schema (Zod, Yup) executa apenas no submit ou onBlur. Validações que precisam ser em tempo real podem ser debouncadas. Em RHF: mode: 'onBlur' ou 'onSubmit'."
+      },
+      {
+        "q": "Quando usar useReducer em forms?",
+        "a": "Quando os campos têm dependências entre si (mudar A reseta B). useReducer centraliza a lógica e evita múltiplos useState entrelaçados."
+      }
+    ],
+    "code": "const SecaoPessoal = React.memo(({ dados, onChange }) => (\n  <fieldset>\n    <input value={dados.nome} onChange={e => onChange('nome', e.target.value)} />\n    <input value={dados.email} onChange={e => onChange('email', e.target.value)} />\n  </fieldset>\n));"
+  },
+  {
+    "id": 13,
+    "emoji": "🔑",
+    "title": "Keys em Listas Dinâmicas",
+    "level": "Fundamentos",
+    "color": "#fb7185",
+    "summary": "Key deve ser estável e única por item. Index como key corrompe estado em listas que mudam.",
+    "definition": "Keys são identificadores que o React usa no algoritmo de reconciliação para rastrear quais elementos da lista mudaram, foram adicionados ou removidos. Keys estáveis preservam estado dos componentes; keys voláteis fazem o React destruir e recriar.",
+    "problem": "index como key: remover item 0 faz todos os outros mudarem de key — React reutiliza componentes errados.",
+    "solution": "Usar ID único e estável do item (id do banco de dados, UUID gerado uma vez, etc).",
+    "tip": "Key muda = React destrói e recria o componente do zero (perde state). Key estável = preserva state.",
+    "questions": [
+      {
+        "q": "Posso usar Math.random() como key?",
+        "a": "Não. Cada render gera key diferente, fazendo o React destruir e recriar todos os componentes. Estado é perdido, animações reiniciam, performance é péssima. Use IDs estáveis."
+      },
+      {
+        "q": "Quando index como key é OK?",
+        "a": "Lista 100% estática (nunca reordena, adiciona ou remove), e os itens não têm estado interno (input, animação, etc). Em qualquer outro caso, prefira ID."
+      },
+      {
+        "q": "Por que key é prop especial?",
+        "a": "Não é passada para o componente filho — é usada apenas pelo React internamente. Por isso props.key dentro do componente é undefined. É um identificador no contexto do array."
+      }
+    ],
+    "code": "// ❌ Index como key — quebra\n{items.map((item, i) => <Item key={i} {...item} />)}\n\n// ✅ ID único\n{items.map(item => <Item key={item.id} {...item} />)}"
+  },
+  {
+    "id": 14,
+    "emoji": "🏗️",
+    "title": "Boundary RSC no Next.js",
+    "level": "Next.js RSC",
+    "color": "#34d399",
+    "summary": "Server Components = dados e lógica server-side. Client Components = apenas onde há interatividade.",
+    "definition": "No App Router, todos os componentes são Server Components por padrão. 'use client' marca o boundary onde começa o código client. O ideal é empurrar 'use client' para as folhas — apenas onde há useState, eventos ou browser APIs.",
+    "problem": "'use client' em tudo envia JS desnecessário ao browser — anula os benefícios do RSC.",
+    "solution": "Empurrar 'use client' para as folhas da árvore — apenas nos componentes com useState/eventos.",
+    "tip": "Pergunta: 'precisa de useState, useEffect, event handlers ou browser APIs?' Se não → Server Component.",
+    "questions": [
+      {
+        "q": "Server Component pode importar Client Component?",
+        "a": "Sim, sem problemas. O Server Component renderiza o HTML inicial e o Client Component é hidratado depois no browser."
+      },
+      {
+        "q": "Client Component pode importar Server Component?",
+        "a": "Não diretamente. Mas pode RECEBER Server Components como children (props). Padrão: <ClientWrapper><ServerComp /></ClientWrapper> funciona."
+      },
+      {
+        "q": "Server Components têm bundle no client?",
+        "a": "Não. Zero JS do componente vai para o browser. Apenas o HTML resultante. Por isso libs pesadas (markdown, charts complexos) usadas só no server reduzem o bundle do cliente."
+      }
+    ],
+    "code": "// page.tsx — Server Component\nasync function ProductPage({ params }) {\n  const product = await db.getProduct(params.id);\n  return (\n    <div>\n      <ProductInfo product={product} />\n      <AddToCart productId={product.id} />\n    </div>\n  );\n}\n\n// AddToCart.tsx\n'use client';\nfunction AddToCart({ productId }) {\n  const [qty, setQty] = useState(1);\n  return <button onClick={...}>Adicionar</button>;\n}"
+  },
+  {
+    "id": 15,
+    "emoji": "🔬",
+    "title": "React Profiler",
+    "level": "DevTools",
+    "color": "#22d3ee",
+    "summary": "Ferramenta no React DevTools que mostra quais componentes renderizaram, por quê e quanto custou.",
+    "definition": "React Profiler é uma aba do React DevTools que grava sessões de renderização e mostra: quais componentes renderizaram, em que fase (mount/update), tempo gasto, e o motivo (props, state, context). Existe também a API Profiler para uso programático.",
+    "problem": "console.log e Lighthouse não mostram qual componente React específico está causando lentidão.",
+    "solution": "React Profiler → flamegraph com timing por componente + 'Why did this render?' para diagnóstico exato.",
+    "tip": "Sempre faça profiling em modo Produção (build). O modo Desenvolvimento é propositalmente mais lento.",
+    "questions": [
+      {
+        "q": "O que significa actualDuration vs baseDuration?",
+        "a": "actualDuration é o tempo real do render (com memoização). baseDuration é o tempo SEM memoização (re-renderizando tudo). A diferença mostra quanto a memoização está economizando."
+      },
+      {
+        "q": "Como medir performance em produção real?",
+        "a": "Use Web Vitals (LCP, INP, CLS) via web-vitals lib enviando para analytics. Profiler é para development. Em produção, Real User Monitoring (RUM) é o caminho."
+      },
+      {
+        "q": "Profiler pode rodar em produção?",
+        "a": "Build de produção remove a Profiler API por padrão. Para habilitar, use o build especial com profiling enabled (React docs explicam). Não recomendado em produção real."
+      }
+    ],
+    "code": "import { Profiler } from 'react';\n\n<Profiler id=\"App\" onRender={(id, phase, actualDuration) => {\n  if (actualDuration > 16) {\n    console.warn(`Lento: ${id} ${actualDuration}ms`);\n  }\n}}>\n  <Dashboard />\n</Profiler>"
+  },
+  {
+    "id": 16,
+    "emoji": "⚡",
+    "title": "Dados em Tempo Real",
+    "level": "Performance",
+    "color": "#fb923c",
+    "summary": "Estado normalizado por ID + seletores memoizados por item = só o item alterado re-renderiza.",
+    "definition": "Estado normalizado é uma estrutura plana, organizada por ID, semelhante a uma tabela de banco de dados. Combinado com seletores memoizados (Reselect, useStore com selector), garante que apenas componentes cujos dados específicos mudaram re-renderizem.",
+    "problem": "Array de 1000 itens: atualizar 1 item cria novo array → todos os 1000 componentes re-renderizam.",
+    "solution": "Normalizar estado em mapa por ID. Cada componente seleciona apenas seu slice via seletor memoizado.",
+    "tip": "Esse é o padrão do Redux Toolkit (createEntityAdapter) e de qualquer store que lida com listas grandes.",
+    "questions": [
+      {
+        "q": "Por que arrays são problemáticos para tempo real?",
+        "a": "Porque qualquer mudança cria novo array (referência nova), causando re-render de todos os componentes que dependem dele. Mapas/objetos por ID permitem updates granulares."
+      },
+      {
+        "q": "Como Zustand evita re-renders desnecessários?",
+        "a": "O hook useStore aceita um seletor: useStore(s => s.byId[id]). Apenas re-renderiza quando esse pedaço específico do estado muda, comparado por Object.is."
+      },
+      {
+        "q": "WebSocket vs polling para tempo real?",
+        "a": "WebSocket: bidirecional, baixa latência, ideal para chat/dashboards live. Polling/SSE: mais simples, funciona em qualquer infra. Para Next.js, Server-Sent Events (SSE) costuma ser suficiente para a maioria dos casos."
+      }
+    ],
+    "code": "// Estado normalizado\nconst [byId, setById] = useState({\n  '1': { id:'1', price: 99 },\n  '42': { id:'42', price: 100 }\n});\n\n// Seletor por item\nconst ItemRow = React.memo(({ id }) => {\n  const item = useStore(s => s.byId[id]);\n  return <tr><td>{item.price}</td></tr>;\n});"
+  },
+  {
+    "id": 17,
+    "emoji": "🎨",
+    "title": "useLayoutEffect vs useEffect",
+    "level": "Hooks",
+    "color": "#818cf8",
+    "summary": "useLayoutEffect roda ANTES do browser pintar — imprescindível para medir e ajustar o DOM sem flash.",
+    "definition": "useLayoutEffect executa síncronamente APÓS o React commit mas ANTES do browser pintar. useEffect executa assíncronamente após o paint. A diferença é crítica para evitar flash visual em manipulações de DOM.",
+    "problem": "useEffect após o paint causa flash de layout: usuário vê a posição/tamanho errado por um frame.",
+    "solution": "useLayoutEffect para qualquer leitura + ajuste de DOM que precisa ocorrer antes do usuário ver.",
+    "tip": "Regra prática: viu flash visual ao usar useEffect? Troque por useLayoutEffect. Para todo o resto: useEffect.",
+    "questions": [
+      {
+        "q": "useLayoutEffect funciona em SSR?",
+        "a": "Não — não há DOM no servidor. React mostra warning. Use a custom: useIsomorphicLayoutEffect (= useLayoutEffect no client, useEffect no server). Ou simplesmente o componente que usa useLayoutEffect deve ser Client Component."
+      },
+      {
+        "q": "useLayoutEffect afeta performance?",
+        "a": "Pode bloquear o paint se for muito pesado, causando lag visível. Use só quando necessário e mantenha o código rápido. Para operações longas, prefira useEffect."
+      },
+      {
+        "q": "Existe equivalente para depois do paint?",
+        "a": "Sim: requestAnimationFrame ou useEffect com setTimeout(0). Útil para tracking, analytics, ou qualquer coisa que não deve bloquear o paint."
+      }
+    ],
+    "code": "useLayoutEffect(() => {\n  const rect = ref.current.getBoundingClientRect();\n  setPos({ top: rect.bottom, left: rect.left });\n}, [open]);"
+  },
+  {
+    "id": 18,
+    "emoji": "✂️",
+    "title": "Code Splitting por Rota",
+    "level": "Performance",
+    "color": "#4ade80",
+    "summary": "Cada rota carrega apenas seu próprio JS — bundle inicial menor, carregamento mais rápido.",
+    "definition": "Code splitting divide o bundle JavaScript em chunks menores carregados sob demanda. React.lazy() + Suspense é o padrão para componentes. Em Next.js App Router, cada page.tsx é automaticamente um chunk separado.",
+    "problem": "Bundle único com todas as telas: usuário baixa código de páginas que pode nunca visitar.",
+    "solution": "React.lazy + dynamic import divide o bundle por rota. Suspense mostra skeleton durante o carregamento.",
+    "tip": "No Next.js App Router, cada page.tsx já é automaticamente code-split. React.lazy() não é necessário.",
+    "questions": [
+      {
+        "q": "React.lazy vs next/dynamic?",
+        "a": "React.lazy é a API padrão do React, funciona em qualquer app. next/dynamic é o wrapper do Next.js que adiciona: SSR opcional (ssr: false), loading fallback, e suporte a named exports."
+      },
+      {
+        "q": "O que é prefetching?",
+        "a": "Carregar o chunk antes do usuário precisar. Next.js Link prefetch (faz auto em hover/viewport). Pode ser manual com import() em handlers."
+      },
+      {
+        "q": "Code splitting por rota vs por componente?",
+        "a": "Por rota é mais simples e geralmente suficiente. Por componente faz sentido para componentes pesados raramente usados (modais complexos, editores, charts)."
+      }
+    ],
+    "code": "const Dashboard = lazy(() => import('./Dashboard'));\n\n<Suspense fallback={<Skeleton />}>\n  <Dashboard />\n</Suspense>"
+  },
+  {
+    "id": 19,
+    "emoji": "🔧",
+    "title": "Web Workers no React",
+    "level": "Performance",
+    "color": "#38bdf8",
+    "summary": "Workers processam código pesado em thread separada sem travar a UI. Comunicação via postMessage + setState.",
+    "definition": "Web Workers permitem rodar JavaScript em threads separadas do main thread. Não têm acesso ao DOM. Ideais para cálculos pesados (parsing, encriptação, image processing). Comunicação via postMessage/onmessage.",
+    "problem": "Cálculos pesados no thread principal travam a UI — scroll, animações e inputs ficam sem resposta.",
+    "solution": "Criar Worker no useEffect (uma vez). Enviar via postMessage. Receber resultado e aplicar via setState.",
+    "tip": "Nunca criar Worker dentro do render ou de useMemo — cria nova thread a cada render. Sempre useEffect + useRef.",
+    "questions": [
+      {
+        "q": "Worker vs SharedWorker vs Service Worker?",
+        "a": "Worker: thread por aba. SharedWorker: compartilhado entre abas da mesma origem. Service Worker: roda em background mesmo sem aba aberta, intercepta requests (PWA, offline)."
+      },
+      {
+        "q": "Comlink simplifica Workers?",
+        "a": "Sim. Comlink (Google) abstrai postMessage/onmessage em chamadas async normais. Você chama worker.heavyFunc(data) como se fosse local, e ele lida com a comunicação por baixo."
+      },
+      {
+        "q": "Workers podem fazer fetch?",
+        "a": "Sim, fetch funciona em Workers. Útil para descarregar parsing de respostas grandes (JSON gigante, CSV, etc.) sem travar a UI."
+      }
+    ],
+    "code": "useEffect(() => {\n  workerRef.current = new Worker(\n    new URL('./worker.js', import.meta.url)\n  );\n  workerRef.current.onmessage = ({ data }) => setResult(data);\n  return () => workerRef.current?.terminate();\n}, []);"
+  },
+  {
+    "id": 20,
+    "emoji": "⚛️",
+    "title": "Virtual DOM & Reconciliação",
+    "level": "Fundamentos",
+    "color": "#06b6d4",
+    "summary": "Representação em memória do DOM real. React compara versões e aplica apenas as mudanças necessárias.",
+    "definition": "Virtual DOM é uma representação em JavaScript da árvore do DOM real. Quando o estado muda, React cria uma nova versão do Virtual DOM e compara (diffing) com a anterior. Apenas as diferenças são aplicadas no DOM real, otimizando performance.",
+    "problem": "Manipular o DOM diretamente é lento (cada operação dispara reflow/repaint). Atualizar grandes UIs sem otimização trava o browser.",
+    "solution": "React mantém Virtual DOM em memória, calcula diff entre versões, e aplica apenas as mudanças mínimas no DOM real (batched).",
+    "tip": "Virtual DOM não é mágico — é uma camada de otimização. Em alguns casos (animações, canvas), manipulação direta com refs é mais rápida.",
+    "questions": [
+      {
+        "q": "O que é Fiber e como difere do Virtual DOM antigo?",
+        "a": "Fiber é a arquitetura do React 16+ que reescreveu o reconciliador. Permite renderização interrompível (Concurrent Mode), priorização de updates, e suspense. O Virtual DOM continua, mas o algoritmo de processamento mudou completamente."
+      },
+      {
+        "q": "Por que React precisa de keys nas listas?",
+        "a": "Para o algoritmo de diffing identificar qual item é qual entre renders. Sem keys, React reconcilia por posição (index), o que falha quando itens são reordenados."
+      },
+      {
+        "q": "Virtual DOM é mais rápido que DOM direto?",
+        "a": "Não necessariamente. Para mudanças simples e localizadas, DOM direto é mais rápido. O Virtual DOM ganha em UIs complexas com muitas atualizações em cascata, onde calcular o mínimo necessário é crucial."
+      }
+    ],
+    "code": "// Conceitualmente:\n// Render 1: VDOM = <div><span>Felipe</span></div>\n// Render 2: VDOM = <div><span>Annye</span></div>\n\n// React calcula diff: apenas o texto do span mudou\n// DOM real recebe: span.textContent = \"Annye\"\n// (não recria div nem span)"
+  },
+  {
+    "id": 21,
+    "emoji": "📜",
+    "title": "Rules of Hooks",
+    "level": "Fundamentos",
+    "color": "#a78bfa",
+    "summary": "Hooks só podem ser chamados no topo de função componente, sempre na mesma ordem.",
+    "definition": "As Rules of Hooks são regras invioláveis: 1) Só chame hooks no nível superior (não em loops, condicionais ou nested functions). 2) Só chame hooks de funções React (componentes ou outros hooks). O ESLint plugin react-hooks/rules-of-hooks valida automaticamente.",
+    "problem": "Chamar hooks condicionalmente quebra o React — ele rastreia hooks por ordem de chamada, não por nome.",
+    "solution": "Sempre chamar todos os hooks no topo da função, na mesma ordem em todos os renders. Condições devem estar dentro do hook, não em volta dele.",
+    "tip": "Se precisa chamar hook condicionalmente, extraia para um componente filho que renderiza condicionalmente.",
+    "questions": [
+      {
+        "q": "Por que React rastreia hooks por ordem?",
+        "a": "Para simplicidade e performance. Com a regra de 'mesma ordem sempre', React mantém apenas um array de estados internos por componente. Sem essa regra, precisaria de identificação por nome (mais lento e verboso)."
+      },
+      {
+        "q": "Posso chamar hooks em event handlers?",
+        "a": "Não. Hooks só em funções de componentes ou em outros hooks customizados. Em handlers, use o estado/setter retornado pelo hook chamado no topo."
+      },
+      {
+        "q": "Como condicionar lógica de um hook?",
+        "a": "Mover a condição PARA DENTRO do hook. Ex: useEffect(() => { if (cond) doStuff(); }, [cond]). NÃO: if (cond) useEffect(...)."
+      }
+    ],
+    "code": "// ❌ ERRADO: hook em condicional\nfunction Comp({ user }) {\n  if (user) {\n    const [data, setData] = useState(null); // QUEBRA\n  }\n}\n\n// ✅ CORRETO: condicional dentro do hook\nfunction Comp({ user }) {\n  const [data, setData] = useState(null);\n  useEffect(() => {\n    if (user) loadData();\n  }, [user]);\n}"
+  },
+  {
+    "id": 22,
+    "emoji": "🎣",
+    "title": "Custom Hooks",
+    "level": "Fundamentos",
+    "color": "#ec4899",
+    "summary": "Funções que começam com 'use' e encapsulam lógica reutilizável de stateful logic.",
+    "definition": "Custom Hooks são funções JavaScript que começam com 'use' e podem chamar outros hooks. Permitem extrair e reutilizar lógica stateful entre componentes sem precisar de HOCs ou render props. Cada chamada de um custom hook tem seu próprio estado isolado.",
+    "problem": "Lógica complexa duplicada em vários componentes (subscriptions, formulários, fetching) — código repetido e difícil de manter.",
+    "solution": "Extrair a lógica em um custom hook que retorna apenas o necessário. Cada componente que usa o hook tem sua instância isolada de estado.",
+    "tip": "Nome SEMPRE começa com 'use' para ESLint validar regras dos hooks. Retorne tupla [valor, setter] ou objeto, conforme a clareza.",
+    "questions": [
+      {
+        "q": "Custom hooks compartilham estado entre componentes?",
+        "a": "Não. Cada chamada de um custom hook em um componente diferente tem estado independente. Para compartilhar estado, use Context, Zustand, Redux ou outra solução de state management."
+      },
+      {
+        "q": "Quando criar um custom hook?",
+        "a": "Quando a mesma lógica stateful aparece em 2+ componentes. Ou quando um componente fica difícil de ler com muitos hooks misturados — extrair para custom hook melhora legibilidade."
+      },
+      {
+        "q": "Custom hook pode chamar outros custom hooks?",
+        "a": "Sim, hooks compõem. useUser pode chamar useFetch que chama useState e useEffect. As Rules of Hooks valem em toda a cadeia."
+      }
+    ],
+    "code": "function useDebounce(value, delay = 500) {\n  const [debounced, setDebounced] = useState(value);\n\n  useEffect(() => {\n    const timer = setTimeout(() => setDebounced(value), delay);\n    return () => clearTimeout(timer);\n  }, [value, delay]);\n\n  return debounced;\n}\n\n// Uso\nfunction SearchInput() {\n  const [query, setQuery] = useState('');\n  const debouncedQuery = useDebounce(query, 300);\n\n  useEffect(() => {\n    if (debouncedQuery) fetchResults(debouncedQuery);\n  }, [debouncedQuery]);\n}"
+  },
+  {
+    "id": 23,
+    "emoji": "🎛️",
+    "title": "useReducer",
+    "level": "Hooks",
+    "color": "#f59e0b",
+    "summary": "Alternativa ao useState para estados complexos com múltiplas transições — padrão Redux local.",
+    "definition": "useReducer é um hook que recebe (reducer, initialState) e retorna [state, dispatch]. O reducer é uma função pura (state, action) => newState. Ideal quando o próximo estado depende do anterior, ou quando há múltiplas transições relacionadas.",
+    "problem": "Múltiplos useState entrelaçados (quando mudar A, resetar B, validar C) ficam confusos e propensos a bugs de sincronização.",
+    "solution": "Centralizar a lógica em um reducer puro. As transições ficam explícitas e testáveis. dispatch(action) é mais previsível que múltiplos setState.",
+    "tip": "Para estado simples (1-2 valores independentes), useState. Para estado complexo (objeto com múltiplos campos relacionados), useReducer.",
+    "questions": [
+      {
+        "q": "useReducer vs useState — quando escolher?",
+        "a": "useState: 1-3 valores independentes. useReducer: 4+ valores relacionados, ou quando o próximo state depende complexamente do anterior, ou quando você quer testar a lógica de transição isoladamente."
+      },
+      {
+        "q": "useReducer + useContext substitui Redux?",
+        "a": "Para apps pequenos/médios, sim. Para apps grandes, Redux Toolkit oferece DevTools, middleware, slices, e melhor performance com seletores. A escolha depende da escala."
+      },
+      {
+        "q": "Por que reducer deve ser puro?",
+        "a": "Para previsibilidade e testabilidade. Side effects (fetch, localStorage) devem ficar em useEffect ou middleware (no caso de Redux). Reducer puro = mesma input → mesmo output."
+      }
+    ],
+    "code": "function reducer(state, action) {\n  switch (action.type) {\n    case 'add':    return { ...state, count: state.count + 1 };\n    case 'remove': return { ...state, count: state.count - 1 };\n    case 'reset':  return { count: 0 };\n    default: throw new Error();\n  }\n}\n\nfunction Counter() {\n  const [state, dispatch] = useReducer(reducer, { count: 0 });\n  return (\n    <>\n      <button onClick={() => dispatch({ type: 'add' })}>+</button>\n      <span>{state.count}</span>\n    </>\n  );\n}"
+  },
+  {
+    "id": 24,
+    "emoji": "🌍",
+    "title": "Context API + useContext",
+    "level": "Hooks",
+    "color": "#10b981",
+    "summary": "Compartilha valores entre componentes sem prop drilling. Provider envolve, useContext consome.",
+    "definition": "Context API permite compartilhar valores (tema, usuário, idioma) entre componentes sem passar props manualmente em cada nível. createContext() cria o contexto, <Provider value={...}> envolve a árvore, useContext(MyContext) lê o valor.",
+    "problem": "Prop drilling: passar props através de 5+ níveis de componentes que não usam, apenas repassam. Código verboso e difícil de refatorar.",
+    "solution": "Context API: Provider envolve uma vez no topo, qualquer descendente usa useContext para acessar diretamente. Mas atenção: Context causa re-render de TODOS os consumers quando o value muda.",
+    "tip": "Context não é state management — é prop drilling avoidance. Para state global complexo, prefira Zustand/Redux/Jotai (mais performáticos).",
+    "questions": [
+      {
+        "q": "Por que Context causa re-renders excessivos?",
+        "a": "Quando o value do Provider muda, TODOS os componentes que usam useContext re-renderizam, mesmo que só usem parte do valor. Solução: dividir em múltiplos contexts ou usar libs como use-context-selector."
+      },
+      {
+        "q": "Context vs Redux/Zustand?",
+        "a": "Context: ideal para valores que raramente mudam (tema, idioma, usuário). Redux/Zustand: para state que muda frequentemente, com seletores otimizados que evitam re-renders desnecessários."
+      },
+      {
+        "q": "Como evitar re-renders desnecessários no Context?",
+        "a": "1) Estabilizar value com useMemo. 2) Dividir contexts (ThemeContext separado de UserContext). 3) Usar libs como use-context-selector que permitem seletores. 4) Memoizar componentes consumidores."
+      }
+    ],
+    "code": "const ThemeContext = createContext('light');\n\nfunction App() {\n  const [theme, setTheme] = useState('dark');\n  const value = useMemo(() => ({ theme, setTheme }), [theme]);\n\n  return (\n    <ThemeContext.Provider value={value}>\n      <Layout />\n    </ThemeContext.Provider>\n  );\n}\n\nfunction Button() {\n  const { theme } = useContext(ThemeContext);\n  return <button className={theme}>Click</button>;\n}"
+  },
+  {
+    "id": 25,
+    "emoji": "📍",
+    "title": "useRef & forwardRef",
+    "level": "Hooks",
+    "color": "#8b5cf6",
+    "summary": "useRef retorna ref mutável que persiste entre renders. forwardRef expõe ref a componentes pai.",
+    "definition": "useRef cria um objeto { current: ... } que persiste entre renders sem causar re-render quando alterado. Usado para: 1) Acessar elementos DOM. 2) Guardar valores mutáveis (timers, instâncias). forwardRef permite que componentes funcionais recebam refs do pai.",
+    "problem": "Precisa acessar um elemento DOM (focar input, scroll, medir). Ou guardar valor que muda mas não deve causar re-render.",
+    "solution": "useRef para refs locais. forwardRef para expor refs internas a componentes pais. ref.current é mutável e não dispara re-render.",
+    "tip": "Mudar ref.current NÃO causa re-render. Se precisa que UI atualize quando o valor muda, use useState.",
+    "questions": [
+      {
+        "q": "useRef vs useState — quando usar cada?",
+        "a": "useRef: valores que não afetam a renderização (timers, contadores internos, refs DOM). useState: valores que, quando mudam, devem re-renderizar a UI."
+      },
+      {
+        "q": "O que é forwardRef?",
+        "a": "Por padrão, refs não passam para componentes funcionais (props.ref é undefined). forwardRef envolve o componente para receber e repassar refs. Necessário para componentes de biblioteca (Button, Input, etc)."
+      },
+      {
+        "q": "useImperativeHandle — para que serve?",
+        "a": "Customiza o que o ref do componente expõe ao pai. Em vez de expor o DOM bruto, você expõe métodos específicos (focus, scrollIntoView, validate). Melhora encapsulamento."
+      }
+    ],
+    "code": "// useRef + forwardRef\nconst Input = forwardRef((props, ref) => {\n  return <input ref={ref} {...props} />;\n});\n\nfunction Form() {\n  const inputRef = useRef(null);\n\n  const handleClick = () => {\n    inputRef.current.focus(); // acesso direto ao DOM\n  };\n\n  return (\n    <>\n      <Input ref={inputRef} />\n      <button onClick={handleClick}>Focar</button>\n    </>\n  );\n}"
+  },
+  {
+    "id": 26,
+    "emoji": "🛡️",
+    "title": "Error Boundaries",
+    "level": "Padrão",
+    "color": "#ef4444",
+    "summary": "Componentes class que capturam erros em sua árvore e exibem UI de fallback em vez de quebrar o app.",
+    "definition": "Error Boundaries são componentes class que implementam componentDidCatch ou getDerivedStateFromError. Capturam erros lançados em componentes filhos durante render, lifecycle ou construtores. Não capturam: event handlers, async, SSR, ou erros do próprio Error Boundary.",
+    "problem": "Um erro em qualquer componente quebra a árvore inteira do React, mostrando tela em branco para o usuário.",
+    "solution": "Error Boundaries 'isolam' partes da UI — quando algo quebra dentro, mostra fallback UI sem afetar o resto. Combine com Sentry/Bugsnag para reportar.",
+    "tip": "Use react-error-boundary (lib) para versão moderna com hooks e reset. Coloque ErrorBoundaries em pontos estratégicos (rota, sidebar, feed), não em todo componente.",
+    "questions": [
+      {
+        "q": "Por que Error Boundary precisa ser class?",
+        "a": "Os métodos componentDidCatch e getDerivedStateFromError são lifecycle de class. Hooks ainda não têm equivalente direto. Use a lib react-error-boundary para uma API com hooks por baixo."
+      },
+      {
+        "q": "O que Error Boundaries NÃO capturam?",
+        "a": "1) Erros em event handlers (use try/catch). 2) Async (Promises rejeitadas, fetch). 3) SSR (use error.tsx no Next.js). 4) Erros no próprio Error Boundary. 5) Erros de hidratação (parcialmente)."
+      },
+      {
+        "q": "No Next.js App Router, como tratar erros?",
+        "a": "error.tsx em cada rota cria um Error Boundary automático. global-error.tsx para o root. not-found.tsx para 404. Esses arquivos precisam ser Client Components ('use client')."
+      }
+    ],
+    "code": "class ErrorBoundary extends React.Component {\n  state = { hasError: false };\n\n  static getDerivedStateFromError(error) {\n    return { hasError: true };\n  }\n\n  componentDidCatch(error, info) {\n    Sentry.captureException(error, { extra: info });\n  }\n\n  render() {\n    if (this.state.hasError) return <h1>Algo deu errado.</h1>;\n    return this.props.children;\n  }\n}\n\n// Uso\n<ErrorBoundary>\n  <Dashboard />\n</ErrorBoundary>"
+  },
+  {
+    "id": 27,
+    "emoji": "🌀",
+    "title": "React Portals",
+    "level": "Padrão",
+    "color": "#06b6d4",
+    "summary": "Renderiza filhos em outro lugar do DOM, mantendo a árvore React. Útil para modals, tooltips, dropdowns.",
+    "definition": "Portals (createPortal) renderizam um componente em um nó DOM diferente do pai, mas mantêm a hierarquia React (events, context, state funcionam normalmente). Ideal para elementos que precisam escapar de overflow:hidden ou z-index do pai.",
+    "problem": "Modal dentro de um container com overflow:hidden é cortado. Tooltip dentro de um sidebar com z-index baixo fica atrás de outros elementos.",
+    "solution": "Portal renderiza o modal em document.body (ou outro nó), escapando dos limites visuais do pai. Mas eventos ainda 'sobem' pela árvore React, não pela DOM.",
+    "tip": "Portal não muda comportamento de events em React (bubble pela árvore React). Mas no DOM real, o event sobe a partir do nó portal — pode confundir libs que dependem de event.target.closest().",
+    "questions": [
+      {
+        "q": "Por que usar Portal em vez de mover o componente para o root?",
+        "a": "Portal mantém a relação React (props, context, refs). Se você renderizar fora, perde acesso a contexts e props. Portal é o melhor dos dois mundos."
+      },
+      {
+        "q": "Eventos 'borbulham' através de Portals?",
+        "a": "Sim, no React. Um onClick no parent React captura cliques do portal, mesmo o portal estando em document.body. No DOM nativo não, mas o React simula isso."
+      },
+      {
+        "q": "Onde colocar o div root para portals?",
+        "a": "Geralmente <div id='modal-root'> no public/index.html ou layout.tsx, fora da div principal do app. Permite z-index alto sem conflitos."
+      }
+    ],
+    "code": "function Modal({ children, onClose }) {\n  return createPortal(\n    <div className=\"modal-overlay\" onClick={onClose}>\n      <div className=\"modal-content\">{children}</div>\n    </div>,\n    document.getElementById('modal-root')\n  );\n}\n\n// Renderizado no DOM em document.getElementById('modal-root')\n// Mas no React continua sendo filho do componente que o chamou"
+  },
+  {
+    "id": 28,
+    "emoji": "⚠️",
+    "title": "Strict Mode",
+    "level": "Fundamentos",
+    "color": "#f59e0b",
+    "summary": "Modo de desenvolvimento que expõe bugs: efeitos rodam 2x, warnings extras, detecta APIs deprecadas.",
+    "definition": "<StrictMode> é um wrapper de desenvolvimento que: 1) Executa funções de render, useState initializer, e effects DUAS VEZES (detecta side effects ocultos). 2) Avisa sobre APIs antigas. 3) Detecta uso incorreto de Context. Não afeta produção (zero overhead em build).",
+    "problem": "Side effects em renders, mutações em state, ou APIs deprecadas que funcionam mas causarão problemas em Concurrent Mode.",
+    "solution": "StrictMode 'expõe' esses bugs em desenvolvimento, executando código duas vezes para deixar problemas visíveis (efeitos sem cleanup, useState com mutation, etc).",
+    "tip": "Se seu código quebra em StrictMode, é bug que vai aparecer em Concurrent Mode em produção. Sempre rode com StrictMode em dev.",
+    "questions": [
+      {
+        "q": "Por que useEffect roda 2x em StrictMode?",
+        "a": "Para detectar effects sem cleanup adequado. React simula: monta → desmonta → monta novamente. Se cleanup está correto, comportamento é idêntico. Se não, você verá problemas (subscriptions duplicadas, etc)."
+      },
+      {
+        "q": "StrictMode afeta produção?",
+        "a": "Não. Em build de produção, StrictMode não tem efeito. Os 'avisos' e duplicações são apenas em desenvolvimento."
+      },
+      {
+        "q": "Como evitar duplicação em dev?",
+        "a": "NÃO 'fugir' do StrictMode — corrigir o código. Effects devem ter cleanup. Initializers do useState devem ser puros. APIs como AbortController para cancelar fetches duplicados."
+      }
+    ],
+    "code": "// _app.tsx ou main.tsx\n<StrictMode>\n  <App />\n</StrictMode>\n\n// useEffect com cleanup correto\nuseEffect(() => {\n  const controller = new AbortController();\n  fetch('/api', { signal: controller.signal })\n    .then(r => r.json())\n    .then(setData);\n\n  return () => controller.abort(); // cleanup\n}, []);"
+  },
+  {
+    "id": 29,
+    "emoji": "💧",
+    "title": "Hydration & Hydration Mismatch",
+    "level": "Next.js",
+    "color": "#0ea5e9",
+    "summary": "Hydration: tornar o HTML estático (SSR) interativo. Mismatch: HTML server diferente do que client renderiza.",
+    "definition": "Hydration é o processo de 'attachar' os event listeners do React ao HTML pré-renderizado pelo servidor. Hydration Mismatch ocorre quando o HTML do servidor difere do que o client renderizaria — React precisa descartar e re-renderizar, perdendo a vantagem do SSR.",
+    "problem": "new Date(), Math.random(), window/document, valores que dependem do horário do client → HTML diferente entre server e client = mismatch.",
+    "solution": "useEffect para código client-only. suppressHydrationWarning em casos pontuais. Em RSC, cookies()/headers() para valores dinâmicos. dynamic({ ssr: false }) para componentes 100% client.",
+    "tip": "Sempre que ver 'Hydration failed' no console: identifique o que difere entre server e client. Datas, IDs aleatórios e localStorage são as causas mais comuns.",
+    "questions": [
+      {
+        "q": "Como debugar hydration mismatch?",
+        "a": "Console mostra qual elemento difere. Causas comuns: 1) new Date() inline. 2) typeof window check incorreto. 3) localStorage no render. 4) Componentes que dependem de viewport. 5) Math.random() para keys."
+      },
+      {
+        "q": "useId resolve mismatch de IDs?",
+        "a": "Sim. useId gera IDs estáveis entre server e client (sequência baseada na árvore React), evitando mismatch ao usar IDs em labels, ARIA, etc."
+      },
+      {
+        "q": "Selective Hydration ajuda como?",
+        "a": "Com Suspense + Streaming, partes podem ser hidratadas independentemente. Mismatch em uma parte não quebra a página inteira — apenas aquele boundary é re-renderizado client-side."
+      }
+    ],
+    "code": "// ❌ Hydration mismatch\nfunction Comp() {\n  return <div>{new Date().toLocaleTimeString()}</div>;\n  // server: 14:23:01\n  // client: 14:23:02 (diferente)\n}\n\n// ✅ Solução: useEffect\nfunction Comp() {\n  const [time, setTime] = useState(null);\n  useEffect(() => setTime(new Date().toLocaleTimeString()), []);\n  return <div>{time}</div>; // server: vazio, client: hora\n}\n\n// ✅ Solução: dynamic import sem SSR\nconst ClientOnly = dynamic(() => import('./Comp'), { ssr: false });"
+  },
+  {
+    "id": 30,
+    "emoji": "🔗",
+    "title": "useSyncExternalStore",
+    "level": "Hooks",
+    "color": "#a78bfa",
+    "summary": "Hook para integrar stores externos (Redux, Zustand) com Concurrent React sem tearing.",
+    "definition": "useSyncExternalStore é o hook oficial para subscribar em stores externos (não-React) garantindo consistência em Concurrent Mode. Substitui useEffect+useState para subscriptions. Usado internamente pelo Redux, Zustand e outras libs modernas.",
+    "problem": "Em Concurrent Mode, renders podem ser interrompidos. Stores externos (subscribe-based) podem causar tearing — UI mostrando estados diferentes em momentos diferentes do render.",
+    "solution": "useSyncExternalStore garante leitura síncrona e consistente do store, sem tearing. API: useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot).",
+    "tip": "Você raramente vai usar diretamente — Zustand, Redux Toolkit, etc já usam internamente. Use quando criar lib de state management ou subscribar APIs nativas (matchMedia, online/offline).",
+    "questions": [
+      {
+        "q": "Quando usar useSyncExternalStore vs useEffect?",
+        "a": "useSyncExternalStore: quando o valor vem de fora do React (window.matchMedia, BroadcastChannel, custom store). useEffect+useState: para values que estão no React e mudam por setState."
+      },
+      {
+        "q": "Como integrar com window.matchMedia?",
+        "a": "Subscribe = adiciona listener; getSnapshot = retorna mql.matches atual; getServerSnapshot = false (server não tem viewport). Hook retorna boolean reativo."
+      },
+      {
+        "q": "Selector com useSyncExternalStore?",
+        "a": "Use a versão useSyncExternalStoreWithSelector (do react-server-utils ou Redux). Permite memoizar partes do store, evitando re-renders desnecessários."
+      }
+    ],
+    "code": "function useMediaQuery(query) {\n  return useSyncExternalStore(\n    (callback) => {\n      const mql = window.matchMedia(query);\n      mql.addEventListener('change', callback);\n      return () => mql.removeEventListener('change', callback);\n    },\n    () => window.matchMedia(query).matches,\n    () => false // SSR fallback\n  );\n}\n\nconst isMobile = useMediaQuery('(max-width: 768px)');"
+  },
+  {
+    "id": 31,
+    "emoji": "🆔",
+    "title": "useId",
+    "level": "Hooks",
+    "color": "#ec4899",
+    "summary": "Gera IDs únicos e estáveis entre SSR e client — evita hydration mismatch em IDs.",
+    "definition": "useId é um hook do React 18 que retorna um ID único e estável para o componente. O ID é o mesmo no server e no client, evitando hydration mismatch. Usado para conectar inputs com labels, ARIA attributes, e outros casos onde IDs são necessários.",
+    "problem": "Math.random() ou Date.now() geram IDs diferentes entre server e client → hydration mismatch. Counter manual quebra com Concurrent Mode.",
+    "solution": "useId gera IDs determinísticos baseados na posição na árvore React. Mesmo ID em server e client. Imune a Concurrent Mode.",
+    "tip": "NÃO use useId para keys de listas — use IDs do dado real. useId é para conectar elementos relacionados (label-input, ARIA).",
+    "questions": [
+      {
+        "q": "useId vs UUID?",
+        "a": "useId: ID determinístico baseado na árvore React, igual server/client, ideal para a11y. UUID: aleatório, único globalmente, ideal para keys de banco/dados, mas causa mismatch em SSR."
+      },
+      {
+        "q": "Posso concatenar useId?",
+        "a": "Sim. Padrão comum: const id = useId(); depois id+'-name', id+'-email' para múltiplos campos relacionados ao mesmo formulário."
+      },
+      {
+        "q": "useId funciona com SSR no Next.js?",
+        "a": "Sim, perfeitamente. Foi feito para isso. App Router gera IDs estáveis entre Server Component render e client hydration."
+      }
+    ],
+    "code": "function FormField({ label, ...props }) {\n  const id = useId();\n  return (\n    <div>\n      <label htmlFor={id}>{label}</label>\n      <input id={id} {...props} />\n    </div>\n  );\n}\n\n// Múltiplos relacionados\nfunction PasswordField() {\n  const id = useId();\n  return (\n    <>\n      <input id={id + '-password'} type=\"password\" />\n      <span id={id + '-help'}>Min 8 chars</span>\n    </>\n  );\n}"
+  },
+  {
+    "id": 32,
+    "emoji": "🎚️",
+    "title": "Controlled vs Uncontrolled",
+    "level": "Fundamentos",
+    "color": "#fb923c",
+    "summary": "Controlled: React controla o valor via state. Uncontrolled: DOM mantém o valor, acesso via ref.",
+    "definition": "Controlled Components: o valor do input está no state do React (value={state} + onChange={setState}). Uncontrolled: o DOM gerencia internamente, React acessa via ref no momento necessário (defaultValue + ref.current.value).",
+    "problem": "Controlled com forms grandes causa re-render por keystroke. Uncontrolled é menos React-idiomático e dificulta validação em tempo real.",
+    "solution": "Controlled para forms simples e validação live. Uncontrolled para forms grandes e performance crítica. react-hook-form usa uncontrolled com a interface de controlled.",
+    "tip": "Misturar value + defaultValue causa warning. Defina ou um ou outro. defaultValue só roda no primeiro render — útil para inicialização.",
+    "questions": [
+      {
+        "q": "Quando usar uncontrolled?",
+        "a": "1) Forms grandes onde performance importa. 2) Integração com libs não-React. 3) File inputs (sempre uncontrolled — não dá pra setar value programaticamente). 4) Inputs onde você só precisa do valor no submit."
+      },
+      {
+        "q": "Como validar uncontrolled?",
+        "a": "No submit ou onBlur, leia ref.current.value e valide. Bibliotecas como react-hook-form abstraem isso elegantemente, dando você a API de controlled mas com performance de uncontrolled."
+      },
+      {
+        "q": "Por que defaultValue não atualiza?",
+        "a": "defaultValue só é lido no primeiro render. Mudanças posteriores são ignoradas — esse é o comportamento de uncontrolled. Se precisa atualizar, é controlled (use value)."
+      }
+    ],
+    "code": "// Controlled\nfunction Controlled() {\n  const [value, setValue] = useState('');\n  return <input value={value} onChange={e => setValue(e.target.value)} />;\n}\n\n// Uncontrolled\nfunction Uncontrolled() {\n  const ref = useRef(null);\n  const handleSubmit = () => console.log(ref.current.value);\n  return (\n    <>\n      <input ref={ref} defaultValue=\"Felipe\" />\n      <button onClick={handleSubmit}>OK</button>\n    </>\n  );\n}"
+  },
+  {
+    "id": 33,
+    "emoji": "⬆️",
+    "title": "Lifting State Up",
+    "level": "Padrão",
+    "color": "#10b981",
+    "summary": "Mover estado para o ancestral comum quando dois componentes precisam compartilhar.",
+    "definition": "Lifting State Up é o padrão de mover state para o componente ancestral mais próximo que ambos os componentes que precisam dele compartilham. Os filhos recebem state via props e callbacks para alterá-lo. É o padrão fundamental de gerenciamento de estado no React.",
+    "problem": "Dois componentes irmãos precisam compartilhar/sincronizar estado. Componente A tem state local, B precisa do mesmo valor.",
+    "solution": "Mover o state para o pai comum. Pai passa para A e B via props. Para alterar, pai passa callbacks (setX) que filhos invocam.",
+    "tip": "Quando o lifting sobe muitos níveis (>3), considere Context, Zustand ou outra solução de state management. Lifting é elegante mas tem limites.",
+    "questions": [
+      {
+        "q": "Lifting state vs Context API?",
+        "a": "Lifting: ideal para 2-3 níveis. Mais explícito, melhor para refactor. Context: bom para muitos níveis ou quando muitos componentes consomem. Trade-off: explicitness vs convenience."
+      },
+      {
+        "q": "Quando NÃO usar lifting?",
+        "a": "Quando o state sobe demais (5+ níveis) e polui componentes que não usam. Quando muitos componentes em locais distantes precisam acessar — Context, Zustand ou Redux são melhores."
+      },
+      {
+        "q": "Como combinar lifting com performance?",
+        "a": "Memoize callbacks com useCallback ao passar para filhos memoizados. Considere splitting de state — partes que mudam frequentemente vs partes estáveis em diferentes lugares."
+      }
+    ],
+    "code": "// Pai mantém estado, filhos compartilham via props\nfunction Form() {\n  const [shared, setShared] = useState('');\n\n  return (\n    <>\n      <Input value={shared} onChange={setShared} />\n      <Preview value={shared} />\n    </>\n  );\n}\n\nfunction Input({ value, onChange }) {\n  return <input value={value} onChange={e => onChange(e.target.value)} />;\n}\n\nfunction Preview({ value }) {\n  return <p>Preview: {value}</p>;\n}"
+  },
+  {
+    "id": 34,
+    "emoji": "🏎️",
+    "title": "SSG vs SSR vs ISR vs CSR",
+    "level": "Next.js",
+    "color": "#0ea5e9",
+    "summary": "Estratégias de renderização: build-time, request-time, regenerated, e client-side.",
+    "definition": "SSG (Static Site Generation): HTML gerado em build-time, servido como arquivo estático. SSR (Server-Side Rendering): HTML gerado a cada request. ISR (Incremental Static Regeneration): SSG com revalidação automática. CSR (Client-Side Rendering): HTML vazio, JS popula no browser.",
+    "problem": "Trade-offs entre performance, freshness dos dados, custo de servidor e SEO.",
+    "solution": "Escolher por página: SSG para conteúdo estático (blogs), SSR para dados sempre frescos (dashboards), ISR para conteúdo semi-estático (e-commerce), CSR para apps internos (admin).",
+    "tip": "No App Router: padrão é SSG. Adicione fetch com cache:'no-store' ou cookies()/headers() para tornar SSR. revalidate:N para ISR.",
+    "questions": [
+      {
+        "q": "Qual a diferença entre SSG e ISR?",
+        "a": "SSG é gerado UMA vez no build — para atualizar precisa rebuildar. ISR regenera sob demanda em background, com tempo de revalidate. Usuário sempre recebe versão cacheada (rápido) e o background atualiza."
+      },
+      {
+        "q": "SSR é sempre mais lento que SSG?",
+        "a": "Sim — SSR exige servidor processando a cada request. Mas SSR + Streaming + cache de dados pode chegar perto. Para dados muito dinâmicos (per-user), SSR é necessário."
+      },
+      {
+        "q": "Como decidir entre os 4?",
+        "a": "Dado muda raramente e é igual para todos? SSG. Muda toda hora mas é igual? ISR (revalidate). Per-user ou tempo real? SSR. App interativo sem SEO? CSR."
+      }
+    ],
+    "code": "// App Router - Default SSG\nasync function Page() {\n  const data = await fetch('https://api.com/posts');\n  return <div>{data.title}</div>;\n}\n\n// SSR (sempre fresh)\nasync function Page() {\n  const data = await fetch('https://api.com/posts',\n    { cache: 'no-store' });\n}\n\n// ISR (revalida a cada 60s)\nasync function Page() {\n  const data = await fetch('https://api.com/posts',\n    { next: { revalidate: 60 } });\n}\n\n// Force SSR via dynamic\nexport const dynamic = 'force-dynamic';"
+  },
+  {
+    "id": 35,
+    "emoji": "📡",
+    "title": "Server Actions",
+    "level": "Next.js",
+    "color": "#34d399",
+    "summary": "Funções 'use server' que rodam no servidor mas podem ser chamadas direto do client — sem API routes.",
+    "definition": "Server Actions são funções marcadas com 'use server' que rodam no servidor. Podem ser passadas para forms (action={}) ou chamadas via JS de Client Components. Próximas a 'RPC' — eliminam a necessidade de API routes para mutações.",
+    "problem": "Criar API routes só para mutações simples (form submission, like, follow) é boilerplate desnecessário. Cliente precisa fetchar manualmente, gerenciar loading/error.",
+    "solution": "Server Actions: escreva uma função que roda no server, marque com 'use server', use direto em <form action={}> ou chame de Client Components. Next.js cuida da serialização e routing.",
+    "tip": "Server Actions têm CSRF protection automática no Next.js. Mas valide sempre os dados — o client envia tudo, inclusive campos manipulados.",
+    "questions": [
+      {
+        "q": "Server Action vs Route Handler?",
+        "a": "Server Action: para mutações usadas apenas pelo seu app (tightly-coupled, segura). Route Handler: para APIs públicas, webhooks, integrações com terceiros, GET endpoints."
+      },
+      {
+        "q": "Como invalidar cache após Server Action?",
+        "a": "revalidatePath('/path') invalida o cache de uma página específica. revalidateTag('tag') invalida fetches com aquela tag. Combinado com fetch's next.tags, controle granular de cache."
+      },
+      {
+        "q": "Server Actions podem retornar?",
+        "a": "Sim, qualquer JSON serializável. Útil para retornar erros de validação, IDs criados, etc. O cliente recebe via async/await."
+      }
+    ],
+    "code": "// app/actions.ts\n'use server';\n\nexport async function createPost(formData) {\n  const title = formData.get('title');\n  await db.posts.create({ title });\n  revalidatePath('/posts');\n}\n\n// Uso direto em form\nexport default function NewPost() {\n  return (\n    <form action={createPost}>\n      <input name=\"title\" />\n      <button>Criar</button>\n    </form>\n  );\n}\n\n// Uso em Client Component\n'use client';\nfunction Btn() {\n  return <button onClick={() => createPost(formData)}>Like</button>;\n}"
+  },
+  {
+    "id": 36,
+    "emoji": "💾",
+    "title": "Caching no Next.js",
+    "level": "Next.js",
+    "color": "#f59e0b",
+    "summary": "4 camadas de cache: Request Memoization, Data Cache, Full Route Cache, Router Cache.",
+    "definition": "Next.js App Router tem 4 camadas de cache: 1) Request Memoization (deduplica fetches no mesmo render). 2) Data Cache (cache persistente de fetch). 3) Full Route Cache (HTML+RSC payload de rotas estáticas). 4) Router Cache (client-side cache do router).",
+    "problem": "Buscar os mesmos dados múltiplas vezes em uma renderização. Re-renderizar páginas estáticas a cada request. Carregar rotas já visitadas do servidor novamente.",
+    "solution": "Next.js implementa caching agressivo por padrão em todas as camadas. Você opta por sair via cache:'no-store', dynamic, ou configurações específicas.",
+    "tip": "O caching agressivo do Next.js 14 confunde devs no início. Quando dados não atualizam, geralmente é cache. Use revalidatePath/Tag ou cache:'no-store' explicitamente.",
+    "questions": [
+      {
+        "q": "Como invalidar Data Cache?",
+        "a": "revalidatePath('/posts') ou revalidateTag('posts') em Server Actions/Route Handlers. Ou definir time-based via { next: { revalidate: 60 } } no fetch."
+      },
+      {
+        "q": "Router Cache é o quê?",
+        "a": "Cache client-side do payload RSC. Quando você navega para uma rota e volta, o Next.js usa o cache em vez de buscar de novo. Configurável via staleTimes em next.config.js."
+      },
+      {
+        "q": "unstable_cache para que serve?",
+        "a": "Memoiza chamadas a funções server-side (DB, computações) com TTL e tags. Útil para cache de queries que não usam fetch, como Prisma queries."
+      }
+    ],
+    "code": "// Data Cache com revalidate\nfetch('/api/posts', { next: { revalidate: 60, tags: ['posts'] }});\n\n// Force no cache\nfetch('/api/posts', { cache: 'no-store' });\n\n// Invalidar manualmente\n'use server';\nexport async function createPost() {\n  await db.posts.create(...);\n  revalidateTag('posts');\n}\n\n// unstable_cache para queries não-fetch\nconst getUser = unstable_cache(\n  async (id) => await db.users.findUnique({ where: { id }}),\n  ['user'],\n  { revalidate: 60, tags: ['user'] }\n);"
+  },
+  {
+    "id": 37,
+    "emoji": "⚡",
+    "title": "Edge Runtime vs Node Runtime",
+    "level": "Next.js",
+    "color": "#22d3ee",
+    "summary": "Edge: V8 isolates, baixa latência global, APIs limitadas. Node: ambiente completo, mais APIs, mais lento.",
+    "definition": "Next.js suporta dois runtimes: Edge (V8 isolates rodando em CDN edge global, baixa latência, mas com APIs Web restritas — sem Node modules). Node (Node.js completo, todas as APIs, deploy em servidor central). Configurado por route via export const runtime.",
+    "problem": "Latência global (servidor central distante de usuários) vs limitações de APIs (Edge não tem fs, http2, alguns DB drivers).",
+    "solution": "Edge para rotas leves e globais (auth, redirects, A/B testing). Node para rotas pesadas, com DB, libs grandes, ou que precisam de Node APIs.",
+    "tip": "Cold starts no Edge são quase zero. No Node serverless, pode ser 100ms-2s. Para APIs críticas, Edge ganha em latência mas perde em ecossistema.",
+    "questions": [
+      {
+        "q": "Quando usar Edge vs Node?",
+        "a": "Edge: middleware, autenticação, redirects, geo-routing, cabeçalhos. Node: queries com Prisma/Drizzle, libs nativas (sharp, puppeteer), uploads grandes, integrações com APIs antigas."
+      },
+      {
+        "q": "Edge suporta Prisma?",
+        "a": "Apenas com Prisma Accelerate (proxy). Drivers diretos (PostgreSQL, MySQL) não rodam em Edge. Drizzle com Neon/PlanetScale serverless drivers funciona."
+      },
+      {
+        "q": "Como definir runtime?",
+        "a": "export const runtime = 'edge' no top do arquivo da rota/middleware. 'nodejs' é o default. Middleware é sempre Edge."
+      }
+    ],
+    "code": "// app/api/edge/route.ts\nexport const runtime = 'edge';\n\nexport async function GET(req) {\n  // Roda em CDN edge global, < 50ms latência\n  return Response.json({ region: process.env.VERCEL_REGION });\n}\n\n// app/api/heavy/route.ts (Node default)\nexport async function POST(req) {\n  // Pode usar Prisma, sharp, qualquer lib Node\n  const result = await prisma.user.create(...);\n  return Response.json(result);\n}"
+  },
+  {
+    "id": 38,
+    "emoji": "🎬",
+    "title": "Partial Prerendering (PPR)",
+    "level": "Next.js",
+    "color": "#ec4899",
+    "summary": "Combina estático e dinâmico na mesma página: shell estático servido instantaneamente, partes dinâmicas via streaming.",
+    "definition": "Partial Prerendering (PPR) é uma feature experimental do Next.js que combina o melhor de SSG e SSR em uma única página. O 'shell' (header, footer, layout) é prerenderizado estaticamente. Componentes dentro de Suspense são streamed dinamicamente.",
+    "problem": "Páginas mistas (header estático + dados de usuário dinâmicos) precisam escolher: tudo SSG (perde dinamismo) ou tudo SSR (perde performance estática).",
+    "solution": "PPR pré-renderiza a casca estática e marca regiões com Suspense para streaming dinâmico. Usuário vê a página instantaneamente (cache estático) e dados dinâmicos chegam via streaming.",
+    "tip": "PPR ainda é experimental. Habilite via experimental.ppr no next.config. Não tem suporte oficial ainda em todos os hosts além da Vercel.",
+    "questions": [
+      {
+        "q": "PPR vs SSR streaming?",
+        "a": "SSR streaming: tudo é gerado a cada request (mesmo o shell). PPR: shell estático cached em CDN, apenas o dinâmico é gerado por request. PPR é mais rápido para o shell."
+      },
+      {
+        "q": "Quando PPR não vale?",
+        "a": "Páginas onde quase tudo é dinâmico (não há shell estático real) ou onde o shell muda muito por user. Aí SSR puro é mais simples."
+      },
+      {
+        "q": "Como habilitar PPR?",
+        "a": "experimental: { ppr: true } em next.config.js + export const experimental_ppr = true no layout/page. Versões mais novas podem ter API estável."
+      }
+    ],
+    "code": "// app/page.tsx\nexport const experimental_ppr = true;\n\nexport default function Page() {\n  return (\n    <>\n      {/* Shell estático — pré-renderizado em build */}\n      <Header />\n      <Nav />\n\n      {/* Dinâmico — streamed por request */}\n      <Suspense fallback={<Skeleton />}>\n        <UserGreeting /> {/* usa cookies() */}\n      </Suspense>\n\n      <Footer />\n    </>\n  );\n}"
+  },
+  {
+    "id": 39,
+    "emoji": "🚦",
+    "title": "Middleware no Next.js",
+    "level": "Next.js",
+    "color": "#a78bfa",
+    "summary": "Função que roda antes do request chegar na rota. Auth, redirects, headers, A/B testing.",
+    "definition": "Middleware (middleware.ts no root) executa em Edge runtime ANTES do Next.js processar a rota. Pode redirecionar, reescrever URL, modificar headers, adicionar cookies. Roda em TODA request (configurável via matcher).",
+    "problem": "Lógica que precisa rodar antes da rota: verificar autenticação, redirecionar usuários não logados, adicionar headers de segurança, fazer A/B testing.",
+    "solution": "middleware.ts intercepta requests no Edge (rápido, global). Retorna NextResponse para redirect/rewrite/next. Configure matcher para limitar quais rotas afeta.",
+    "tip": "Middleware roda em CADA request — mantenha rápido. Não faça queries pesadas, use Edge runtime. Para auth, valide JWT (rápido), não consulte DB.",
+    "questions": [
+      {
+        "q": "Middleware vs Server Component para auth?",
+        "a": "Middleware: bloqueia ANTES de carregar a rota (mais rápido para deny). Server Component: pode ler cookies/headers e fazer redirect, mas o componente já começou a renderizar. Use middleware para auth simples, Server Component para lógica complexa."
+      },
+      {
+        "q": "Middleware roda em Server Components?",
+        "a": "Sim, antes deles. Middleware → Server Component → Client Component. Headers/cookies modificados no middleware estão disponíveis nos Server Components via headers()/cookies()."
+      },
+      {
+        "q": "Como compartilhar dados entre middleware e a rota?",
+        "a": "Via headers customizados (request.headers.set) ou cookies. Os Server Components leem com headers()/cookies()."
+      }
+    ],
+    "code": "// middleware.ts\nimport { NextResponse } from 'next/server';\n\nexport function middleware(request) {\n  const token = request.cookies.get('token');\n\n  if (!token && request.nextUrl.pathname.startsWith('/admin')) {\n    return NextResponse.redirect(new URL('/login', request.url));\n  }\n\n  // Adicionar header customizado\n  const response = NextResponse.next();\n  response.headers.set('x-custom', 'value');\n  return response;\n}\n\nexport const config = {\n  matcher: ['/admin/:path*', '/api/:path*'],\n};"
+  },
+  {
+    "id": 40,
+    "emoji": "🛣️",
+    "title": "Route Handlers",
+    "level": "Next.js",
+    "color": "#fb923c",
+    "summary": "API routes do App Router. Arquivos route.ts com export GET/POST/PUT/DELETE.",
+    "definition": "Route Handlers são o equivalente App Router das API Routes (Pages Router). Arquivos route.ts (ou .js) que exportam funções nomeadas pelos métodos HTTP. Recebem Request, retornam Response. Suportam Edge ou Node runtime.",
+    "problem": "Pages Router usava /pages/api/* com export default. App Router precisava de uma nova convenção alinhada com Server Components.",
+    "solution": "app/api/.../route.ts com exports GET, POST, etc. Recebem Web Request standard, retornam Web Response. Mais alinhado com Web Standards.",
+    "tip": "Para mutações usadas só pelo seu app, prefira Server Actions. Para APIs públicas, webhooks, ou GET cacheável, use Route Handlers.",
+    "questions": [
+      {
+        "q": "Route Handler vs Server Action?",
+        "a": "Route Handler: API endpoint público, webhook, GET cacheável, integração com app externo. Server Action: mutação tightly-coupled ao seu app, formularios."
+      },
+      {
+        "q": "Como tipar Route Handlers?",
+        "a": "params são tipados via second arg: GET(req: Request, { params }: { params: { id: string } }). Use Zod para validar body. NextResponse para tipos Next-específicos."
+      },
+      {
+        "q": "Como cachear GET handlers?",
+        "a": "GET handlers são cacheados por padrão (em build estático) se não usar APIs dinâmicas. Adicione export const dynamic = 'force-dynamic' para sempre dinâmico, ou export const revalidate = 60 para ISR."
+      }
+    ],
+    "code": "// app/api/posts/route.ts\nimport { NextResponse } from 'next/server';\n\nexport async function GET() {\n  const posts = await db.posts.findAll();\n  return NextResponse.json(posts);\n}\n\nexport async function POST(req: Request) {\n  const data = await req.json();\n  const post = await db.posts.create({ data });\n  return NextResponse.json(post, { status: 201 });\n}\n\n// app/api/posts/[id]/route.ts\nexport async function GET(\n  req: Request,\n  { params }: { params: { id: string } }\n) {\n  const post = await db.posts.findUnique({ where: { id: params.id } });\n  if (!post) return new Response('Not found', { status: 404 });\n  return NextResponse.json(post);\n}"
+  },
+  {
+    "id": 41,
+    "emoji": "📊",
+    "title": "Web Vitals (LCP, INP, CLS)",
+    "level": "Performance",
+    "color": "#4ade80",
+    "summary": "Métricas oficiais Google para UX: Largest Contentful Paint, Interaction to Next Paint, Cumulative Layout Shift.",
+    "definition": "Web Vitals são métricas Google para experiência do usuário. Core Web Vitals: LCP (tempo até maior elemento visível < 2.5s), INP (tempo até resposta a interação < 200ms — substituiu FID em 2024), CLS (layout shift acumulado < 0.1). Afetam SEO.",
+    "problem": "Performance subjetiva é difícil de medir. Usuários percebem 'lento' diferentemente. Google penaliza no SEO sites com Web Vitals ruins.",
+    "solution": "Otimizar especificamente: LCP via image optimization e lazy load. INP via code splitting e debounce. CLS via dimensões fixas em imagens/ads. Monitorar com next/web-vitals em produção.",
+    "tip": "INP (2024) é mais rigoroso que FID. Mede TODAS as interações, não só a primeira. JavaScript pesado em handlers prejudica diretamente.",
+    "questions": [
+      {
+        "q": "O que mais impacta LCP?",
+        "a": "1) Imagens grandes não otimizadas. 2) Fontes web carregadas sem font-display:swap. 3) JS bloqueante no <head>. 4) CSS render-blocking. 5) Servidor lento (TTFB alto)."
+      },
+      {
+        "q": "Como melhorar INP?",
+        "a": "1) Code splitting agressivo. 2) Debounce em handlers pesados. 3) startTransition para updates não-urgentes. 4) Web Workers para cálculos. 5) Remover libs grandes desnecessárias."
+      },
+      {
+        "q": "O que causa CLS?",
+        "a": "Imagens sem width/height. Anúncios injetados. Web fonts trocando. Conteúdo carregando após inicial render. Solução: reservar espaço (aspect-ratio, min-height)."
+      }
+    ],
+    "code": "// Reportar Web Vitals em Next.js\n// app/layout.tsx\nexport function reportWebVitals(metric) {\n  // Enviar para analytics\n  if (metric.label === 'web-vital') {\n    sendToAnalytics({\n      name: metric.name,    // LCP, INP, CLS\n      value: metric.value,\n      id: metric.id\n    });\n  }\n}\n\n// Próximo image previne CLS automaticamente\nimport Image from 'next/image';\n<Image src=\"/foto.jpg\" width={800} height={600} alt=\"...\" />"
+  },
+  {
+    "id": 42,
+    "emoji": "🔄",
+    "title": "React Query / TanStack Query",
+    "level": "Padrão",
+    "color": "#fbbf24",
+    "summary": "Lib para data fetching, cache e sync de server state. Substituí useState+useEffect+manual cache.",
+    "definition": "TanStack Query (antes React Query) é a lib padrão para gerenciar 'server state' — dados que vêm de APIs. Oferece: cache automático, deduplicação, background refetch, optimistic updates, infinite queries, mutations com rollback.",
+    "problem": "useState + useEffect para fetch é repetitivo e propenso a bugs: race conditions, cache manual, refetch on focus, retry, loading/error states.",
+    "solution": "useQuery({ queryKey, queryFn }) → retorna { data, isLoading, error, refetch }. Cache, refetch, dedupe, tudo automático. useMutation para writes com optimistic updates.",
+    "tip": "Use queryKey como ['posts', userId, filters]. React Query invalida e refeta com base nessa key. Defaults são bons — staleTime: 0 (refetch sempre), refetchOnWindowFocus: true.",
+    "questions": [
+      {
+        "q": "React Query vs SWR?",
+        "a": "Ambos resolvem o mesmo problema. React Query: mais features (mutations, infinite, devtools), API mais explícita. SWR (Vercel): mais simples, integração natural com Next.js. Escolha por preferência — ambos excelentes."
+      },
+      {
+        "q": "React Query com Server Components?",
+        "a": "Em Server Components, fetch direto basta (já tem cache do Next.js). Use React Query apenas em Client Components. Para hidratar com dados do server, use HydrationBoundary."
+      },
+      {
+        "q": "Optimistic updates como funciona?",
+        "a": "useMutation com onMutate atualiza o cache otimisticamente. Se a mutation falhar, onError reverte. Resultado: UI instantânea, com rollback automático em caso de erro."
+      }
+    ],
+    "code": "import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';\n\nfunction Posts() {\n  const { data, isLoading } = useQuery({\n    queryKey: ['posts'],\n    queryFn: () => fetch('/api/posts').then(r => r.json())\n  });\n\n  if (isLoading) return <Skeleton />;\n  return data.map(p => <Post key={p.id} {...p} />);\n}\n\nfunction NewPost() {\n  const qc = useQueryClient();\n  const mutation = useMutation({\n    mutationFn: (newPost) => fetch('/api/posts', { method: 'POST', body: JSON.stringify(newPost) }),\n    onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] })\n  });\n\n  return <button onClick={() => mutation.mutate({ title: 'Novo' })}>Criar</button>;\n}"
+  },
+  {
+    "id": 43,
+    "emoji": "✨",
+    "title": "Optimistic UI",
+    "level": "Padrão",
+    "color": "#22d3ee",
+    "summary": "Atualiza UI imediatamente como se a operação tivesse sucesso. Reverte se falhar.",
+    "definition": "Optimistic UI assume que operações server-side terão sucesso e atualiza a UI imediatamente. Se a operação falhar, reverte. Resulta em UX instantânea — usuário não espera o servidor para ver feedback.",
+    "problem": "UX 'lenta' onde toda ação espera o server (ex: dar like → spinner → atualiza). Em redes ruins, isso é catastrófico.",
+    "solution": "Atualizar state local IMEDIATAMENTE com o resultado esperado. Em paralelo, enviar ao servidor. Se falhar, reverter o state e mostrar erro.",
+    "tip": "Use useOptimistic (React 19) ou onMutate/onError do TanStack Query. Combine com Server Actions para um fluxo end-to-end limpo.",
+    "questions": [
+      {
+        "q": "useOptimistic — como funciona?",
+        "a": "Hook do React 19 que cria state otimista temporário. Quando a action 'real' resolve, o state real assume. Se falhar, useOptimistic reseta automaticamente. Combina perfeitamente com Server Actions."
+      },
+      {
+        "q": "Quando NÃO usar Optimistic UI?",
+        "a": "Operações que podem falhar frequentemente (validação complexa server-side). Operações financeiras críticas (pagamento). Operações cuja resposta o user precisa ver (resultado de cálculo)."
+      },
+      {
+        "q": "Como lidar com falha em Optimistic UI?",
+        "a": "Reverter o state otimista + toast de erro + (opcional) retry automático. UX importante: o user precisa entender que a ação falhou."
+      }
+    ],
+    "code": "// React 19 com useOptimistic + Server Action\n'use client';\nimport { useOptimistic } from 'react';\n\nfunction LikeButton({ postId, initialLikes }) {\n  const [likes, addOptimisticLike] = useOptimistic(\n    initialLikes,\n    (state, newLike) => state + 1\n  );\n\n  async function handleLike() {\n    addOptimisticLike(); // UI atualiza instantâneo\n    await likePostAction(postId); // server na verdade\n  }\n\n  return <button onClick={handleLike}>❤️ {likes}</button>;\n}"
+  },
+  {
+    "id": 44,
+    "emoji": "🧩",
+    "title": "Compound Components",
+    "level": "Padrões",
+    "color": "#ec4899",
+    "summary": "Componentes que cooperam via Context. <Tabs><Tab/><Panel/></Tabs> em vez de props gigantes.",
+    "definition": "Compound Components é um padrão onde múltiplos componentes trabalham juntos, compartilhando state implícito via Context. Em vez de uma API monolítica com muitas props, você compõe pequenos componentes que 'sabem' do pai.",
+    "problem": "APIs com muitas props (config: { tabs: [...], activeTab: 0, onChange: ... }) ficam rígidas e difíceis de customizar. Cada novo caso requer nova prop.",
+    "solution": "Pai cria Context. Filhos consomem. API se torna composicional: <Tabs><TabList><Tab/></TabList><TabPanel/></Tabs>. Flexível, intuitivo, fácil de extender.",
+    "tip": "Padrão usado por Radix UI, Headless UI, shadcn/ui. Combina super bem com 'Server Component pattern' onde a composição é feita no parent server-side.",
+    "questions": [
+      {
+        "q": "Quais bibliotecas usam compound components?",
+        "a": "Radix UI (Dialog, Tabs, etc), Headless UI, React Aria, Reach UI. shadcn/ui (que usa Radix por baixo). React Hook Form. É o padrão moderno de design de componentes."
+      },
+      {
+        "q": "Como compartilhar state entre compound components?",
+        "a": "Context API. O pai (<Tabs>) cria o context com state. Os filhos (<Tab>, <TabPanel>) consomem via useContext. State 'flui' implicitamente sem props drilling."
+      },
+      {
+        "q": "Vantagem sobre props config?",
+        "a": "1) Mais flexível (qualquer ordem/aninhamento). 2) Menos verboso para casos simples. 3) Fácil de extender (adicionar novos sub-componentes não quebra API). 4) Melhor IntelliSense."
+      }
+    ],
+    "code": "const TabsContext = createContext(null);\n\nfunction Tabs({ children, defaultValue }) {\n  const [active, setActive] = useState(defaultValue);\n  return (\n    <TabsContext.Provider value={{ active, setActive }}>\n      <div className=\"tabs\">{children}</div>\n    </TabsContext.Provider>\n  );\n}\n\nfunction Tab({ value, children }) {\n  const { active, setActive } = useContext(TabsContext);\n  return (\n    <button\n      className={active === value ? 'active' : ''}\n      onClick={() => setActive(value)}\n    >\n      {children}\n    </button>\n  );\n}\n\nfunction Panel({ value, children }) {\n  const { active } = useContext(TabsContext);\n  if (active !== value) return null;\n  return <div>{children}</div>;\n}\n\n// Uso\n<Tabs defaultValue=\"a\">\n  <Tab value=\"a\">A</Tab>\n  <Tab value=\"b\">B</Tab>\n  <Panel value=\"a\">Conteúdo A</Panel>\n  <Panel value=\"b\">Conteúdo B</Panel>\n</Tabs>"
+  },
+  {
+    "id": 45,
+    "emoji": "🎁",
+    "title": "HOC vs Render Props vs Hooks",
+    "level": "Padrões",
+    "color": "#a78bfa",
+    "summary": "3 formas históricas de reutilizar lógica. Hooks ganhou — HOC e Render Props ainda existem em libs.",
+    "definition": "HOC (Higher-Order Component): função que recebe componente e retorna componente decorado (with-auth, with-router). Render Props: prop que é função, retornando JSX. Hooks: funções use* que encapsulam lógica. Hooks substituíram em 90% dos casos.",
+    "problem": "Antes dos hooks, reutilizar lógica entre componentes era complexo: HOCs criavam 'wrapper hell', Render Props criavam aninhamentos profundos.",
+    "solution": "Hooks resolvem 95% dos casos com código mais simples. HOCs ainda úteis para: integrar com libs antigas (connect do Redux), interceptar props/refs, error boundaries (que precisam ser class).",
+    "tip": "Em código novo, use Hooks. Se ver HOC ou Render Props em libs, é geralmente código pré-2019. forwardRef tecnicamente é um HOC.",
+    "questions": [
+      {
+        "q": "Quando ainda usar HOC?",
+        "a": "1) Wrappers que adicionam props (withAuth, withRouter — Redux ainda usa). 2) Error Boundaries (precisam ser class). 3) Logging/Analytics que envolvem componente inteiro. Para outros casos, use hooks."
+      },
+      {
+        "q": "Render Props onde sobrevivem?",
+        "a": "<Formik render={...}>, <DragDropContext> e algumas APIs declarativas. Em componentes que recebem JSX dependente de state interno. Mas hooks geralmente são mais limpos."
+      },
+      {
+        "q": "forwardRef é HOC?",
+        "a": "Tecnicamente sim — recebe componente, retorna componente. Mas é específico para refs, não para reutilização de lógica geral. É a única forma de receber refs em componentes funcionais."
+      }
+    ],
+    "code": "// HOC (legado)\nfunction withAuth(Component) {\n  return function WithAuth(props) {\n    const user = useAuth();\n    if (!user) return <Login />;\n    return <Component {...props} user={user} />;\n  };\n}\nconst ProtectedDashboard = withAuth(Dashboard);\n\n// Render Props (legado)\n<MouseTracker render={({ x, y }) => <div>{x}, {y}</div>} />\n\n// Hook (moderno)\nfunction useAuth() {\n  const [user, setUser] = useState(null);\n  // ... lógica\n  return user;\n}\n\nfunction Dashboard() {\n  const user = useAuth();\n  if (!user) return <Login />;\n  return <div>Olá, {user.name}</div>;\n}"
+  },
+  {
+    "id": 46,
+    "emoji": "📦",
+    "title": "Automatic Batching",
+    "level": "React 18",
+    "color": "#fbbf24",
+    "summary": "React 18 agrupa múltiplos setState em um único re-render, mesmo em async/promises/setTimeout.",
+    "definition": "Automatic Batching é uma feature do React 18 onde múltiplas chamadas de setState dentro do mesmo evento (incluindo async, promises, timeouts) são agrupadas em um único re-render. No React 17, batching só ocorria em event handlers React.",
+    "problem": "Em React 17, setState dentro de fetch/setTimeout/Promise causava múltiplos re-renders, prejudicando performance.",
+    "solution": "React 18 detecta automaticamente e agrupa. Para forçar render imediato (raríssimo), use flushSync.",
+    "tip": "Se algum código depende do comportamento antigo (sem batching), use flushSync. Mas é raro — normalmente batching é o que você quer.",
+    "questions": [
+      {
+        "q": "Quando NÃO há batching?",
+        "a": "Quase nunca em React 18. Apenas se você usar flushSync explicitamente. Em React 17, batching acontecia apenas em eventos sintéticos do React (onClick, onChange)."
+      },
+      {
+        "q": "flushSync — quando usar?",
+        "a": "Quando precisa de UI atualizada IMEDIATAMENTE antes de uma próxima ação (ex: scrollIntoView depois de adicionar elemento). Caso de uso raríssimo, evite."
+      },
+      {
+        "q": "Batching afeta useEffect?",
+        "a": "Effects rodam após o batching, com o state final. Múltiplos setState batched = useEffect roda uma vez com o estado final."
+      }
+    ],
+    "code": "// React 17: 3 re-renders\nasync function handleClick() {\n  setLoading(true);    // re-render\n  const data = await fetch();\n  setData(data);       // re-render\n  setLoading(false);   // re-render\n}\n\n// React 18: 1 re-render automático!\nasync function handleClick() {\n  setLoading(true);\n  const data = await fetch();\n  setData(data);\n  setLoading(false); // tudo batched\n}\n\n// Forçar render imediato (raro)\nimport { flushSync } from 'react-dom';\nflushSync(() => setOpen(true));\n// DOM já atualizado aqui\nelementRef.current.focus();"
+  },
+  {
+    "id": 47,
+    "emoji": "🍪",
+    "title": "Cookies, CSRF & SameSite",
+    "level": "Segurança",
+    "color": "#ef4444",
+    "summary": "HttpOnly bloqueia JS. SameSite previne CSRF. Secure exige HTTPS. Defaults importantes.",
+    "definition": "Cookies têm flags de segurança críticas: HttpOnly (JS não pode ler — protege contra XSS roubando token), Secure (só transmite via HTTPS), SameSite (Strict/Lax/None, controla quando cookie é enviado em requests cross-site, previne CSRF).",
+    "problem": "Sem essas flags: XSS pode roubar token de auth. CSRF pode disparar ações em nome do user. Cookies vazam em HTTP plain.",
+    "solution": "Sempre HttpOnly+Secure+SameSite=Lax (ou Strict) para cookies de auth. Em Server Actions, Next.js já configura defaults seguros.",
+    "tip": "SameSite=None requer Secure=true. SameSite=Lax é o default moderno e bom para 95% dos casos. Strict pode quebrar fluxos OAuth.",
+    "questions": [
+      {
+        "q": "Diferença entre SameSite=Lax e Strict?",
+        "a": "Strict: cookie NUNCA é enviado em cross-site requests (mesmo via link). Pode quebrar OAuth, links externos. Lax: cookie é enviado em navegação top-level (clicks em links) mas não em iframes/forms cross-site. Lax é o sweet spot."
+      },
+      {
+        "q": "Como CSRF funciona?",
+        "a": "Site malicioso faz request (form submit, img tag) para seu site. Browser envia cookies automaticamente. Servidor não sabe que é maligno e executa ação. SameSite=Lax+ bloqueia. CSRF tokens (forms com token único) também previnem."
+      },
+      {
+        "q": "HttpOnly previne XSS?",
+        "a": "Não previne XSS, mas mitiga o estrago: scripts injetados não conseguem ler o cookie de auth via document.cookie. O servidor ainda recebe normalmente. Defesa em camadas com CSP, sanitização e HttpOnly."
+      }
+    ],
+    "code": "// Next.js Route Handler — cookie seguro\nimport { cookies } from 'next/headers';\n\nexport async function POST() {\n  cookies().set('session', token, {\n    httpOnly: true,        // JS não acessa\n    secure: true,          // só HTTPS\n    sameSite: 'lax',       // previne CSRF\n    path: '/',\n    maxAge: 60 * 60 * 24,  // 1 dia\n  });\n}"
+  },
+  {
+    "id": 48,
+    "emoji": "🛡️",
+    "title": "Content Security Policy (CSP)",
+    "level": "Segurança",
+    "color": "#dc2626",
+    "summary": "Header HTTP que define quais scripts/recursos podem executar. Defesa principal contra XSS.",
+    "definition": "CSP (Content-Security-Policy) é um header HTTP que instrui o browser sobre quais sources de scripts, styles, images, etc podem ser carregados. Bloqueia inline scripts, scripts de domínios não permitidos, eval(). Essencial para defesa em profundidade contra XSS.",
+    "problem": "Mesmo com sanitização, XSS pode acontecer. CSP é a 'última linha de defesa' — mesmo que script malicioso seja injetado, o browser bloqueia execução.",
+    "solution": "Configurar CSP estrito: script-src 'self' (e nonces para inline). Bloquear eval() com a ausência de unsafe-eval. Reportar violações via report-uri.",
+    "tip": "CSP é difícil de implementar do zero — quebra muitas libs/extensões. Use 'Content-Security-Policy-Report-Only' primeiro para detectar violações antes de impor.",
+    "questions": [
+      {
+        "q": "CSP no Next.js — como configurar?",
+        "a": "Via headers() em next.config.js OU em middleware.ts (Edge). Inline scripts do Next.js precisam de nonces — middleware gera nonce, layout consome via headers()."
+      },
+      {
+        "q": "O que é 'unsafe-inline' e por que evitar?",
+        "a": "Diretiva que permite scripts inline (tags script com código direto no HTML). Anula a maior proteção do CSP contra XSS. Use nonces ou hashes para inline necessário, nunca unsafe-inline."
+      },
+      {
+        "q": "CSP afeta extensões do browser?",
+        "a": "Não — extensões têm permissões próprias. CSP bloqueia apenas o que vem do servidor. Mas algumas extensões (analytics, A/B testing) podem ser bloqueadas se forem injetadas via tags."
+      }
+    ],
+    "code": "// next.config.js\nmodule.exports = {\n  async headers() {\n    return [{\n      source: '/:path*',\n      headers: [{\n        key: 'Content-Security-Policy',\n        value: `\n          default-src 'self';\n          script-src 'self' 'nonce-XYZ' https://vercel.live;\n          style-src 'self' 'unsafe-inline';\n          img-src 'self' data: https:;\n          font-src 'self' data:;\n          connect-src 'self' https://api.example.com;\n          frame-ancestors 'none';\n        `.replace(/\\s+/g, ' ').trim()\n      }]\n    }];\n  }\n};"
+  }
+]
