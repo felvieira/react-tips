@@ -6,7 +6,6 @@ import { ShellClient } from '@/components/layout/ShellClient'
 import { AppTopbar } from '@/components/layout/AppTopbar'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
-import { FocusToggle } from '@/components/layout/FocusToggle'
 import { getConcepts, getGlossary, getConceptLevels } from '@/lib/loaders'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -29,7 +28,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           {children}
         </ShellClient>
-        <FocusToggle />
       </body>
     </html>
   )

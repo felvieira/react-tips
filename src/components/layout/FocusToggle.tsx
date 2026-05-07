@@ -7,10 +7,12 @@ export function FocusToggle() {
   return (
     <button
       onClick={toggle}
-      title={focused ? 'Mostrar sidebar' : 'Modo foco'}
-      className="fixed top-4 right-4 z-40 w-8 h-8 flex items-center justify-center bg-surface border border-border rounded-lg text-muted hover:border-accent hover:text-accent transition-all text-[13px]"
+      title={focused ? 'Mostrar sidebar (⌘.)' : 'Modo foco (⌘.)'}
+      className={'app-icon-btn' + (focused ? ' active' : '')}
     >
-      {focused ? '◧' : '□'}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>
+      </svg>
     </button>
   )
 }

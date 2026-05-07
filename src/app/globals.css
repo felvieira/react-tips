@@ -4,8 +4,8 @@
 
 /* ── Design tokens ── */
 :root {
-  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-sans: var(--font-inter, 'Inter'), -apple-system, system-ui, sans-serif;
+  --font-mono: var(--font-jb, 'JetBrains Mono'), ui-monospace, 'SF Mono', Menlo, monospace;
 
   --accent-h: 220;
   --accent: oklch(0.55 0.16 var(--accent-h));

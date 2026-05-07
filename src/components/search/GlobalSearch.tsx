@@ -102,8 +102,13 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
       }
       if (e.key === 'Escape') close()
     }
+    const openHandler = () => setOpen(true)
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    window.addEventListener('open-search', openHandler)
+    return () => {
+      window.removeEventListener('keydown', handler)
+      window.removeEventListener('open-search', openHandler)
+    }
   }, [close])
 
   useEffect(() => {
@@ -122,16 +127,7 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
     }
   }
 
-  if (!open) return (
-    <button
-      onClick={() => setOpen(true)}
-      className="app-searchbar"
-      style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 50 }}
-    >
-      🔍 <span>Busca global</span>
-      <kbd>⌘K</kbd>
-    </button>
-  )
+  if (!open) return null
 
   return (
     <div className="search-overlay">
@@ -154,24 +150,15 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
           <div className="search-results">
             <div className="search-section-lbl">{!query ? 'Conceitos' : 'Resultados'}</div>
             {results.map((r, i) => (
-              <button
+              <div
                 key={r.href}
                 onClick={() => navigate(r.href)}
                 onMouseEnter={() => setSelected(i)}
                 className={'search-result' + (selected === i ? ' active' : '')}
               >
-                <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{r.emoji}</span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 13, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--fg-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>{r.subtitle}</div>
-                </div>
-                <span
-                  className="search-result-where"
-                  style={{ color: r.tagColor, backgroundColor: `${r.tagColor}18` }}
-                >
-                  {r.tag}
-                </span>
-              </button>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.title}</span>
+                <span className="search-result-where" style={{ color: r.tagColor }}>{r.tag}</span>
+              </div>
             ))}
           </div>
         )}

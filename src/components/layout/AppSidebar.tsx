@@ -17,6 +17,26 @@ const DOMAIN_HUES: Record<string, number> = {
   'Padrões': 300,
 }
 
+// Difficulty order: from foundational to advanced
+const DIFFICULTY_ORDER = [
+  'Fundamentos', 'Padrão', 'Padrões', 'Hooks',
+  'Performance', 'React 18', 'Next.js', 'Next.js RSC',
+  'Segurança', 'DevTools',
+]
+
+const DIFFICULTY_LABEL: Record<string, string> = {
+  'Fundamentos': 'Júnior',
+  'Padrão': 'Pleno',
+  'Padrões': 'Pleno',
+  'Hooks': 'Pleno',
+  'Performance': 'Sênior',
+  'React 18': 'Sênior',
+  'Next.js': 'Sênior',
+  'Next.js RSC': 'Staff',
+  'Segurança': 'Staff',
+  'DevTools': 'Staff',
+}
+
 interface AppSidebarProps {
   concepts: Concept[]
   levels: string[]
@@ -43,13 +63,27 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
     }
 
     if (view === 'difficulty') {
-      const diffs = [...new Set(concepts.map(c => c.level))]
-      return diffs.map(d => ({
-        key: d,
-        title: d,
-        hue: 220,
-        items: concepts.filter(c => c.level === d),
-      })).filter(g => g.items.length > 0)
+      // Group by difficulty tier (júnior/pleno/sênior/staff)
+      const tiers: Record<string, { label: string; hue: number; items: typeof concepts }> = {
+        'Júnior':  { label: 'Júnior',  hue: 60,  items: [] },
+        'Pleno':   { label: 'Pleno',   hue: 150, items: [] },
+        'Sênior':  { label: 'Sênior',  hue: 220, items: [] },
+        'Staff':   { label: 'Staff',   hue: 280, items: [] },
+      }
+      // Sort concepts by DIFFICULTY_ORDER first
+      const sorted = [...concepts].sort((a, b) =>
+        (DIFFICULTY_ORDER.indexOf(a.level) ?? 99) - (DIFFICULTY_ORDER.indexOf(b.level) ?? 99)
+      )
+      for (const c of sorted) {
+        const tier = DIFFICULTY_LABEL[c.level] ?? 'Sênior'
+        tiers[tier].items.push(c)
+      }
+      return Object.values(tiers).filter(t => t.items.length > 0).map(t => ({
+        key: t.label,
+        title: t.label,
+        hue: t.hue,
+        items: t.items,
+      }))
     }
 
     // status view
@@ -91,7 +125,10 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
               >
                 <span className={'status-dot' + (status === 'know' ? ' know' : status === 'review' ? ' review' : '')} />
                 <span className="sidebar-row-label">{c.title}</span>
-                {view !== 'difficulty' && (
+                {view === 'domain' && (
+                  <span className="diff-tag">{c.level.slice(0, 3)}</span>
+                )}
+                {view === 'difficulty' && (
                   <span className="diff-tag">{c.level.slice(0, 3)}</span>
                 )}
               </div>
