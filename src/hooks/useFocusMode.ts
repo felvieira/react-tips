@@ -2,32 +2,45 @@
 import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'react-tips-focus'
+const EVENT = 'focus-mode-changed'
+
+function applyFocus(next: boolean) {
+  localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+  window.dispatchEvent(new CustomEvent(EVENT, { detail: next }))
+}
 
 export function useFocusMode() {
   const [focused, setFocused] = useState(false)
 
   useEffect(() => {
+    // Init from storage
     setFocused(localStorage.getItem(STORAGE_KEY) === '1')
-    const handler = (e: KeyboardEvent) => {
+
+    // Listen for changes from other instances
+    const syncHandler = (e: Event) => {
+      setFocused((e as CustomEvent<boolean>).detail)
+    }
+
+    // Keyboard shortcut Cmd/Ctrl + .
+    const keyHandler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '.') {
         e.preventDefault()
-        setFocused(v => {
-          const next = !v
-          localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
-          return next
-        })
+        const next = localStorage.getItem(STORAGE_KEY) !== '1'
+        applyFocus(next)
       }
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+
+    window.addEventListener(EVENT, syncHandler)
+    window.addEventListener('keydown', keyHandler)
+    return () => {
+      window.removeEventListener(EVENT, syncHandler)
+      window.removeEventListener('keydown', keyHandler)
+    }
   }, [])
 
   const toggle = () => {
-    setFocused(v => {
-      const next = !v
-      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
-      return next
-    })
+    const next = localStorage.getItem(STORAGE_KEY) !== '1'
+    applyFocus(next)
   }
 
   return { focused, toggle }
