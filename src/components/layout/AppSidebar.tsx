@@ -5,42 +5,29 @@ import { useProgress } from '@/hooks/useProgress'
 import type { Concept } from '@/lib/schemas'
 
 const DOMAIN_HUES: Record<string, number> = {
-  'Performance': 150,
-  'React 18': 220,
-  'Next.js RSC': 190,
-  'Padrão': 280,
-  'Segurança': 0,
-  'Hooks': 250,
-  'Next.js': 190,
-  'Fundamentos': 60,
-  'DevTools': 200,
-  'Padrões': 300,
-  'Básico FE': 60,
-  'Intermediário FE': 220,
-  'Avançado FE': 300,
+  'Performance': 150, 'React 18': 220, 'Next.js RSC': 190,
+  'Padrão': 280, 'Segurança': 0, 'Hooks': 250, 'Next.js': 190,
+  'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
+  'Básico FE': 60, 'Intermediário FE': 220, 'Avançado FE': 300,
+  'Design System': 30, 'Microfrontend': 160, 'Observabilidade': 50,
+  'Estado Global': 260,
 }
 
-// Difficulty order: from foundational to advanced
 const DIFFICULTY_ORDER = [
   'Fundamentos', 'Básico FE', 'Padrão', 'Padrões', 'Hooks',
-  'Intermediário FE', 'Performance', 'React 18', 'Next.js', 'Next.js RSC',
-  'Avançado FE', 'Segurança', 'DevTools',
+  'Estado Global', 'Design System', 'Intermediário FE',
+  'Performance', 'React 18', 'Next.js', 'Observabilidade', 'Next.js RSC',
+  'Avançado FE', 'Microfrontend', 'Segurança', 'DevTools',
 ]
 
 const DIFFICULTY_LABEL: Record<string, string> = {
-  'Fundamentos': 'Júnior',
-  'Básico FE': 'Júnior',
-  'Padrão': 'Pleno',
-  'Padrões': 'Pleno',
-  'Hooks': 'Pleno',
-  'Intermediário FE': 'Pleno',
-  'Performance': 'Sênior',
-  'React 18': 'Sênior',
-  'Next.js': 'Sênior',
-  'Next.js RSC': 'Staff',
-  'Avançado FE': 'Staff',
-  'Segurança': 'Staff',
-  'DevTools': 'Staff',
+  'Fundamentos': 'Júnior', 'Básico FE': 'Júnior',
+  'Padrão': 'Pleno', 'Padrões': 'Pleno', 'Hooks': 'Pleno',
+  'Intermediário FE': 'Pleno', 'Estado Global': 'Pleno', 'Design System': 'Pleno',
+  'Performance': 'Sênior', 'React 18': 'Sênior', 'Next.js': 'Sênior',
+  'Observabilidade': 'Sênior',
+  'Next.js RSC': 'Staff', 'Avançado FE': 'Staff', 'Segurança': 'Staff',
+  'DevTools': 'Staff', 'Microfrontend': 'Staff',
 }
 
 interface AppSidebarProps {
