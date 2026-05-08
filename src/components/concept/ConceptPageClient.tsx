@@ -87,7 +87,7 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
   useState(() => { setRevealed(false) })
 
   return (
-    <div className="content-inner">
+    <div key={concept.id} className="content-inner animate-fade-up">
       {/* Meta */}
       <div className="concept-meta">
         <span className="domain-pill" style={{ '--h': hue } as React.CSSProperties}>
@@ -117,7 +117,7 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
 
       {/* Flashcard curtain */}
       {flashcard && !revealed && (
-        <div className="concept-section">
+        <div className="concept-section animate-scale-in">
           <div className="flashcard-curtain" onClick={() => setRevealed(true)}>
             <div className="flashcard-curtain-label">⚡ Flashcard</div>
             <div className="flashcard-curtain-hint">Pense na resposta — clique para revelar definição, problema, solução e dica.</div>
@@ -127,7 +127,7 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
 
       {/* Content (shown when not in flashcard mode, or when revealed) */}
       {(!flashcard || revealed) && (
-        <>
+        <div className={revealed ? 'animate-fade-up' : ''}>
           {/* Definition */}
           <div className="concept-section">
             <div className="concept-section-label">Definição</div>
@@ -195,7 +195,7 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Nav arrows */}
@@ -211,13 +211,22 @@ function QABlock({ q, a }: { q: string; a: string }) {
       <div className="qa-q" onClick={() => setOpen(o => !o)}>
         <span className="qa-q-prefix">Q.</span>
         <span style={{ flex: 1 }}>{q}</span>
-        <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>{open ? '▲' : '▾'}</span>
+        <span style={{
+          color: 'var(--fg-subtle)',
+          fontSize: 12,
+          transition: 'transform 0.2s ease',
+          display: 'inline-block',
+          transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
+        }}>▾</span>
       </div>
-      {open && (
+      <div
+        className={'collapse-wrap ' + (open ? 'open' : 'closed')}
+        style={{ maxHeight: open ? 600 : 0 }}
+      >
         <div className="qa-a">
           <span className="qa-a-prefix">A.</span>{a}
         </div>
-      )}
+      </div>
     </div>
   )
 }

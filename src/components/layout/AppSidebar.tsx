@@ -109,6 +109,7 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
         ))}
       </div>
 
+      <div key={view} className="animate-stagger">
       {groups.map(g => (
         <div key={g.key} className="sidebar-section">
           <div className="sidebar-section-title" style={{ '--h': g.hue } as React.CSSProperties}>
@@ -136,6 +137,7 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
           })}
         </div>
       ))}
+      </div>
 
       <div className="sidebar-divider sidebar-section">
         <div className="sidebar-section-title">

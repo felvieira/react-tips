@@ -132,7 +132,7 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
   return (
     <div className="search-overlay">
       <div style={{ position: 'absolute', inset: 0 }} onClick={close} />
-      <div className="search-modal">
+      <div className="search-modal animate-scale-in">
         <div className="search-input-row">
           <span style={{ fontSize: '1.125rem' }}>🔍</span>
           <input
@@ -147,7 +147,7 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
         </div>
 
         {results.length > 0 && (
-          <div className="search-results">
+          <div className="search-results animate-slide-down">
             <div className="search-section-lbl">{!query ? 'Conceitos' : 'Resultados'}</div>
             {results.map((r, i) => (
               <div

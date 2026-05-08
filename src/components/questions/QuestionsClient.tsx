@@ -62,7 +62,7 @@ export function QuestionsClient({ questions, levels }: Props) {
 
   return (
     <>
-      <div className="qpage-filter-row">
+      <div className="qpage-filter-row animate-fade-in">
         <button
           className={'qpage-filter-btn' + (!activeLevel && !onlyGotcha ? ' active' : '')}
           onClick={() => { setActiveLevel(null); setOnlyGotcha(false) }}
@@ -100,30 +100,35 @@ export function QuestionsClient({ questions, levels }: Props) {
             <span style={{ color: `oklch(0.6 0.12 ${DOMAIN_HUES[g.level] ?? 220})` }}>{g.title}</span>
             <span style={{ color: 'var(--fg-subtle)', fontWeight: 400 }}>· {g.items.length} {g.items.length === 1 ? 'pergunta' : 'perguntas'}</span>
           </div>
-          {g.items.map(q => {
-            const isOpen = openKeys.has(q.key)
-            return (
-              <div key={q.key} className="qpage-card">
-                <div className="qpage-q" onClick={() => toggle(q.key)}>
-                  <span className="qpage-q-prefix">Q.</span>
-                  <span className="qpage-q-text">{q.q}</span>
-                  <div className="qpage-q-meta">
-                    {q.gotcha && <span className="qpage-gotcha">⚠ pegadinha</span>}
-                    <span className="qpage-toggle">{isOpen ? '▲' : '▾'}</span>
+          <div className="animate-stagger">
+            {g.items.map(q => {
+              const isOpen = openKeys.has(q.key)
+              return (
+                <div key={q.key} className="qpage-card">
+                  <div className="qpage-q" onClick={() => toggle(q.key)}>
+                    <span className="qpage-q-prefix">Q.</span>
+                    <span className="qpage-q-text">{q.q}</span>
+                    <div className="qpage-q-meta">
+                      {q.gotcha && <span className="qpage-gotcha">⚠ pegadinha</span>}
+                      <span className="qpage-toggle">{isOpen ? '▲' : '▾'}</span>
+                    </div>
+                  </div>
+                  <div
+                    className={'collapse-wrap ' + (isOpen ? 'open' : 'closed')}
+                    style={{ maxHeight: isOpen ? 800 : 0 }}
+                  >
+                    <div className="qpage-a">
+                      <span className="qpage-a-prefix">A.</span>
+                      {q.a}
+                      <Link href={`/concepts/${q.conceptId}`} className="qpage-concept-link">
+                        ver conceito →
+                      </Link>
+                    </div>
                   </div>
                 </div>
-                {isOpen && (
-                  <div className="qpage-a">
-                    <span className="qpage-a-prefix">A.</span>
-                    {q.a}
-                    <Link href={`/concepts/${q.conceptId}`} className="qpage-concept-link">
-                      ver conceito →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       ))}
     </>
