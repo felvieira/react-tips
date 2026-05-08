@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProgress } from '@/hooks/useProgress'
 import { getRelatedTerms } from '@/lib/loaders'
@@ -89,6 +89,17 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
   // Reset flashcard state when concept changes
   useState(() => { setRevealed(false) })
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return
+      if (e.key === 'ArrowRight' && next) router.push(`/concepts/${next}`)
+      if (e.key === 'ArrowLeft' && prev) router.push(`/concepts/${prev}`)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [prev, next, router])
+
   return (
     <div key={concept.id} className="content-inner animate-fade-up">
       {/* Meta */}
@@ -168,20 +179,13 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
           {concept.code && (
             <div className="concept-section">
               <div className="concept-section-label">Código</div>
-              <pre className="concept-code">
-                <code dangerouslySetInnerHTML={{ __html: highlight(concept.code) }} />
-              </pre>
+              <InlineCodeBlock code={concept.code} />
             </div>
           )}
 
           {/* Interview Q&A */}
           {concept.questions && concept.questions.length > 0 && (
-            <div className="concept-section">
-              <div className="concept-section-label">Perguntas de entrevista</div>
-              {concept.questions.map((q, i) => (
-                <QABlock key={i} q={q.q} a={q.a} />
-              ))}
-            </div>
+            <QASection questions={concept.questions} />
           )}
 
           {/* Related glossary terms */}
@@ -207,8 +211,31 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
   )
 }
 
-function QABlock({ q, a }: { q: string; a: string }) {
+function QASection({ questions }: { questions: { q: string; a: string }[] }) {
+  const [allOpen, setAllOpen] = useState(false)
+  return (
+    <div className="concept-section">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div className="concept-section-label" style={{ marginBottom: 0 }}>Perguntas de entrevista</div>
+        <button
+          onClick={() => setAllOpen(v => !v)}
+          style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)',
+            padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 4,
+            cursor: 'pointer', background: 'transparent' }}
+        >
+          {allOpen ? 'fechar todas' : 'expandir todas'}
+        </button>
+      </div>
+      {questions.map((q, i) => (
+        <QABlock key={i} q={q.q} a={q.a} forceOpen={allOpen} />
+      ))}
+    </div>
+  )
+}
+
+function QABlock({ q, a, forceOpen }: { q: string; a: string; forceOpen?: boolean }) {
   const [open, setOpen] = useState(false)
+  const isOpen = forceOpen ?? open
   return (
     <div className="qa-block" style={{ marginBottom: 8 }}>
       <div className="qa-q" onClick={() => setOpen(o => !o)}>
@@ -219,17 +246,49 @@ function QABlock({ q, a }: { q: string; a: string }) {
           fontSize: 12,
           transition: 'transform 0.2s ease',
           display: 'inline-block',
-          transform: open ? 'rotate(180deg)' : 'rotate(0deg)'
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
         }}>▾</span>
       </div>
       <div
-        className={'collapse-wrap ' + (open ? 'open' : 'closed')}
-        style={{ maxHeight: open ? 600 : 0 }}
+        className={'collapse-wrap ' + (isOpen ? 'open' : 'closed')}
+        style={{ maxHeight: isOpen ? 600 : 0 }}
       >
         <div className="qa-a">
           <span className="qa-a-prefix">A.</span>{a}
         </div>
       </div>
+    </div>
+  )
+}
+
+function InlineCodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={handleCopy}
+        style={{
+          position: 'absolute', top: 8, right: 8,
+          padding: '3px 8px', fontSize: 10,
+          fontFamily: 'var(--font-mono)',
+          background: 'var(--border)', border: '1px solid var(--border-strong)',
+          borderRadius: 4, color: 'var(--fg-muted)', cursor: 'pointer',
+          transition: 'all .15s',
+          zIndex: 1,
+        }}
+      >
+        {copied ? '✓ copiado' : 'copiar'}
+      </button>
+      <pre className="concept-code">
+        <code dangerouslySetInnerHTML={{ __html: highlight(code) }} />
+      </pre>
     </div>
   )
 }
@@ -248,8 +307,9 @@ function NavRow({ prev, next, current, total }: { prev: number | null; next: num
           fontFamily: 'var(--font-mono)',
         }}
       >← Anterior</button>
-      <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px', color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontSize: 11 }}>
         {current}/{total}
+        <span style={{ fontSize: 9, color: 'var(--fg-subtle)', fontFamily: 'var(--font-mono)' }}>← →</span>
       </span>
       <button
         onClick={() => next && router.push(`/concepts/${next}`)}

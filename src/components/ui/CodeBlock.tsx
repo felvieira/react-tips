@@ -8,6 +8,13 @@ interface CodeBlockProps {
 
 export function CodeBlock({ code, label = 'Ver código de exemplo' }: CodeBlockProps) {
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
   return (
     <div className="mt-4">
@@ -23,9 +30,25 @@ export function CodeBlock({ code, label = 'Ver código de exemplo' }: CodeBlockP
       </button>
 
       {open && (
-        <pre className="mt-3 bg-[#060912] border border-border rounded-xl p-5 text-xs leading-relaxed text-[#a5c8f0] overflow-x-auto whitespace-pre">
-          {code}
-        </pre>
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={handleCopy}
+            style={{
+              position: 'absolute', top: 20, right: 12,
+              padding: '3px 8px', fontSize: 10,
+              fontFamily: 'var(--font-mono)',
+              background: 'var(--border)', border: '1px solid var(--border-strong)',
+              borderRadius: 4, color: 'var(--fg-muted)', cursor: 'pointer',
+              transition: 'all .15s',
+              zIndex: 1,
+            }}
+          >
+            {copied ? '✓ copiado' : 'copiar'}
+          </button>
+          <pre className="mt-3 bg-[#060912] border border-border rounded-xl p-5 text-xs leading-relaxed text-[#a5c8f0] overflow-x-auto whitespace-pre">
+            {code}
+          </pre>
+        </div>
       )}
     </div>
   )

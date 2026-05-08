@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useProgress } from '@/hooks/useProgress'
 import type { Concept } from '@/lib/schemas'
@@ -44,6 +44,11 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
   const [view, setView] = useState<View>('domain')
 
   const currentId = pathname.startsWith('/concepts/') ? Number(pathname.split('/').pop()) : null
+  const activeRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [currentId])
 
   const groups = useMemo(() => {
     if (view === 'domain') {
@@ -111,10 +116,12 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
           </div>
           {g.items.map(c => {
             const status = getStatus(c.id)
+            const active = currentId === c.id
             return (
               <div
                 key={c.id}
-                className={'sidebar-row' + (currentId === c.id ? ' active' : '')}
+                ref={active ? activeRef : undefined}
+                className={'sidebar-row' + (active ? ' active' : '')}
                 onClick={() => router.push(`/concepts/${c.id}`)}
               >
                 <span className={'status-dot' + (status === 'know' ? ' know' : status === 'review' ? ' review' : '')} />
@@ -136,6 +143,13 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
         <div className="sidebar-section-title">
           <span className="sdot" style={{ background: 'var(--fg-muted)' }} />
           <span>Outros</span>
+        </div>
+        <div
+          className={'sidebar-row' + (pathname === '/revisao' ? ' active' : '')}
+          onClick={() => router.push('/revisao')}
+        >
+          <span className="status-dot review" />
+          <span className="sidebar-row-label">Revisão Rápida</span>
         </div>
         <div
           className={'sidebar-row' + (pathname === '/questions' ? ' active' : '')}

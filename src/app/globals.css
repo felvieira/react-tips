@@ -653,4 +653,18 @@ pre.concept-code .cf { color: oklch(0.6 0.16 30); }
 }
 .qpage-concept-link:hover { color: var(--accent); border-color: var(--accent); }
 
+.progress-bar-wrap {
+  grid-area: topbar;
+  align-self: end;
+  height: 2px;
+  background: var(--border);
+  z-index: 6;
+  pointer-events: none;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
 } /* end @layer components */

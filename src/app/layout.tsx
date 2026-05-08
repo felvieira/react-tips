@@ -7,6 +7,7 @@ import { AppTopbar } from '@/components/layout/AppTopbar'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { getConcepts, getGlossary, getConceptLevels } from '@/lib/loaders'
+import { ProgressBar } from '@/components/layout/ProgressBar'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const mono = JetBrains_Mono({ subsets: ['latin'], weight: ['400','500','600'], variable: '--font-jb' })
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" data-theme="light" data-density="compact" className={`${inter.variable} ${mono.variable}`}>
       <body>
+        <ProgressBar />
         <ShellClient
           topbar={<AppTopbar concepts={concepts} glossary={glossary} />}
           sidebar={<AppSidebar concepts={concepts} levels={levels} />}
