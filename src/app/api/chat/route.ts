@@ -22,10 +22,20 @@ Você não deve:
 - Sair do escopo técnico de programação e tecnologia`
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENROUTER_API_KEY
+  // Priority: env var (server-side) → user-provided key (from header)
+  const apiKey = process.env.OPENROUTER_API_KEY || req.headers.get('x-user-api-key')
+
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'OPENROUTER_API_KEY not configured' }), {
-      status: 500,
+    return new Response(JSON.stringify({ error: 'No API key configured. Add your OpenRouter key in the chat settings.' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Basic validation — must start with sk-or-
+  if (!apiKey.startsWith('sk-or-')) {
+    return new Response(JSON.stringify({ error: 'Invalid API key format. Must start with sk-or-' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     })
   }
