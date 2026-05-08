@@ -8,6 +8,7 @@ import { AppSidebar } from '@/components/layout/AppSidebar'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { getConcepts, getGlossary, getConceptLevels } from '@/lib/loaders'
 import { ProgressBar } from '@/components/layout/ProgressBar'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const mono = JetBrains_Mono({ subsets: ['latin'], weight: ['400','500','600'], variable: '--font-jb' })
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           {children}
         </ShellClient>
+        <ChatWidget />
       </body>
     </html>
   )
