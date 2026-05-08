@@ -12,6 +12,9 @@ const DOMAIN_HUES: Record<string, number> = {
   'Básico FE': 60, 'Intermediário FE': 220, 'Avançado FE': 300,
   'Design System': 30, 'Microfrontend': 160, 'Observabilidade': 50,
   'Estado Global': 260,
+  'Testing': 150, 'Acessibilidade': 280, 'Carreira': 40,
+  'Arquitetura': 200,
+  'IA Básico': 290, 'IA Avançado': 270,
 }
 
 function highlight(code: string): string {
