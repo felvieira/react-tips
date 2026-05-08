@@ -9,6 +9,7 @@ const DOMAIN_HUES: Record<string, number> = {
   'Performance': 150, 'React 18': 220, 'Next.js RSC': 190,
   'Padrão': 280, 'Segurança': 0, 'Hooks': 250,
   'Next.js': 190, 'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
+  'Básico FE': 60, 'Intermediário FE': 220, 'Avançado FE': 300,
 }
 
 function highlight(code: string): string {

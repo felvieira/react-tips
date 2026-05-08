@@ -15,24 +15,30 @@ const DOMAIN_HUES: Record<string, number> = {
   'Fundamentos': 60,
   'DevTools': 200,
   'Padrões': 300,
+  'Básico FE': 60,
+  'Intermediário FE': 220,
+  'Avançado FE': 300,
 }
 
 // Difficulty order: from foundational to advanced
 const DIFFICULTY_ORDER = [
-  'Fundamentos', 'Padrão', 'Padrões', 'Hooks',
-  'Performance', 'React 18', 'Next.js', 'Next.js RSC',
-  'Segurança', 'DevTools',
+  'Fundamentos', 'Básico FE', 'Padrão', 'Padrões', 'Hooks',
+  'Intermediário FE', 'Performance', 'React 18', 'Next.js', 'Next.js RSC',
+  'Avançado FE', 'Segurança', 'DevTools',
 ]
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   'Fundamentos': 'Júnior',
+  'Básico FE': 'Júnior',
   'Padrão': 'Pleno',
   'Padrões': 'Pleno',
   'Hooks': 'Pleno',
+  'Intermediário FE': 'Pleno',
   'Performance': 'Sênior',
   'React 18': 'Sênior',
   'Next.js': 'Sênior',
   'Next.js RSC': 'Staff',
+  'Avançado FE': 'Staff',
   'Segurança': 'Staff',
   'DevTools': 'Staff',
 }
