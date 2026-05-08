@@ -29,13 +29,17 @@ export function ShellClient({ topbar, sidebar, children, search }: ShellClientPr
         className="app-sidebar-wrapper"
         style={{
           gridArea: 'sidebar',
-          overflow: 'hidden',
+          overflow: 'hidden',   /* apenas para a transição de width */
           transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
           width: focused ? 0 : 280,
           flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        {sidebar}
+        <div style={{ width: 280, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {sidebar}
+        </div>
       </div>
       <main className="app-content">
         {children}
