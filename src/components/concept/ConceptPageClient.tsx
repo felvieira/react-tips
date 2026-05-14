@@ -13,7 +13,7 @@ const DOMAIN_HUES: Record<string, number> = {
   'Design System': 30, 'Microfrontend': 160, 'Observabilidade': 50,
   'Estado Global': 260,
   'Testing': 150, 'Acessibilidade': 280, 'Carreira': 40,
-  'Arquitetura': 200,
+  'Arquitetura': 200, 'Corporativo': 35,
   'IA Básico': 290, 'IA Avançado': 270,
 }
 

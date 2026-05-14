@@ -11,13 +11,14 @@ const DOMAIN_HUES: Record<string, number> = {
   'Básico FE': 60, 'Intermediário FE': 220, 'Avançado FE': 300,
   'Design System': 30, 'Microfrontend': 160, 'Observabilidade': 50,
   'Estado Global': 260,
+  'Corporativo': 35,
   'Testing': 150, 'Acessibilidade': 280, 'Carreira': 40,
   'Arquitetura': 200,
   'IA Básico': 290, 'IA Avançado': 270,
 }
 
 const DIFFICULTY_ORDER = [
-  'Fundamentos', 'Básico FE', 'Padrão', 'Padrões', 'Hooks', 'Carreira',
+  'Fundamentos', 'Básico FE', 'Padrão', 'Padrões', 'Hooks', 'Carreira', 'Corporativo',
   'Estado Global', 'Design System', 'Testing', 'Acessibilidade', 'Intermediário FE',
   'Performance', 'React 18', 'Next.js', 'Observabilidade', 'Arquitetura',
   'Next.js RSC', 'Avançado FE', 'Microfrontend', 'Segurança', 'DevTools',
@@ -25,7 +26,7 @@ const DIFFICULTY_ORDER = [
 ]
 
 const DIFFICULTY_LABEL: Record<string, string> = {
-  'Fundamentos': 'Júnior', 'Básico FE': 'Júnior', 'Carreira': 'Júnior',
+  'Fundamentos': 'Júnior', 'Básico FE': 'Júnior', 'Carreira': 'Júnior', 'Corporativo': 'Pleno',
   'Padrão': 'Pleno', 'Padrões': 'Pleno', 'Hooks': 'Pleno',
   'Intermediário FE': 'Pleno', 'Estado Global': 'Pleno', 'Design System': 'Pleno',
   'Testing': 'Pleno', 'Acessibilidade': 'Pleno',
