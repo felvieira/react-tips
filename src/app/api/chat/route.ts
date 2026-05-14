@@ -52,6 +52,16 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'messages array required' }), { status: 400 })
   }
 
+  // Sanitize: only allow user/assistant roles to prevent prompt injection
+  const sanitized = messages
+    .filter((m): m is { role: 'user' | 'assistant'; content: string } =>
+      (m.role === 'user' || m.role === 'assistant') &&
+      typeof m.content === 'string' &&
+      m.content.length > 0 &&
+      m.content.length < 10000
+    )
+    .slice(-20) // max 20 messages to limit context abuse
+
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -64,7 +74,7 @@ export async function POST(req: NextRequest) {
       model: 'moonshotai/kimi-k2',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
-        ...messages,
+        ...sanitized,
       ],
       stream: true,
       max_tokens: 2000,

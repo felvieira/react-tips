@@ -3,38 +3,27 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useProgress } from '@/hooks/useProgress'
 import type { Concept } from '@/lib/schemas'
-
-const DOMAIN_HUES: Record<string, number> = {
-  'Performance': 150, 'React 18': 220, 'Next.js RSC': 190,
-  'Padrão': 280, 'Segurança': 0, 'Hooks': 250, 'Next.js': 190,
-  'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
-  'Básico FE': 60, 'Intermediário FE': 220, 'Avançado FE': 300,
-  'Design System': 30, 'Microfrontend': 160, 'Observabilidade': 50,
-  'Estado Global': 260,
-  'Corporativo': 35,
-  'Testing': 150, 'Acessibilidade': 280, 'Carreira': 40,
-  'Arquitetura': 200,
-  'IA Básico': 290, 'IA Avançado': 270,
-}
+import { DOMAIN_HUES, STORAGE_KEYS } from '@/lib/constants'
 
 const DIFFICULTY_ORDER = [
   'Fundamentos', 'Básico FE', 'Padrão', 'Padrões', 'Hooks', 'Carreira', 'Corporativo',
   'Estado Global', 'Design System', 'Testing', 'Acessibilidade', 'Intermediário FE',
   'Performance', 'React 18', 'Next.js', 'Observabilidade', 'Arquitetura',
-  'Next.js RSC', 'Avançado FE', 'Microfrontend', 'Segurança', 'DevTools',
+  'Next.js RSC', 'Avançado FE', 'Avançado', 'Microfrontend', 'Segurança', 'DevTools',
   'IA Básico', 'IA Avançado',
 ]
 
 const DIFFICULTY_LABEL: Record<string, string> = {
-  'Fundamentos': 'Júnior', 'Básico FE': 'Júnior', 'Carreira': 'Júnior', 'Corporativo': 'Pleno',
+  'Fundamentos': 'Júnior', 'Básico FE': 'Júnior', 'Carreira': 'Júnior',
+  'Corporativo': 'Pleno',
   'Padrão': 'Pleno', 'Padrões': 'Pleno', 'Hooks': 'Pleno',
   'Intermediário FE': 'Pleno', 'Estado Global': 'Pleno', 'Design System': 'Pleno',
   'Testing': 'Pleno', 'Acessibilidade': 'Pleno',
   'Performance': 'Sênior', 'React 18': 'Sênior', 'Next.js': 'Sênior',
   'Observabilidade': 'Sênior', 'Arquitetura': 'Sênior',
   'IA Básico': 'Sênior', 'IA Avançado': 'Staff',
-  'Next.js RSC': 'Staff', 'Avançado FE': 'Staff', 'Segurança': 'Staff',
-  'DevTools': 'Staff', 'Microfrontend': 'Staff',
+  'Next.js RSC': 'Staff', 'Avançado FE': 'Staff', 'Avançado': 'Staff',
+  'Segurança': 'Staff', 'DevTools': 'Staff', 'Microfrontend': 'Staff',
 }
 
 interface AppSidebarProps {
@@ -133,10 +122,7 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
               >
                 <span className={'status-dot' + (status === 'know' ? ' know' : status === 'review' ? ' review' : '')} />
                 <span className="sidebar-row-label">{c.title}</span>
-                {view === 'domain' && (
-                  <span className="diff-tag">{c.level.slice(0, 3)}</span>
-                )}
-                {view === 'difficulty' && (
+                {view !== 'status' && (
                   <span className="diff-tag">{c.level.slice(0, 3)}</span>
                 )}
               </div>

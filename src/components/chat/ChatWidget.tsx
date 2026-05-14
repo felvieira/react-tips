@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { STORAGE_KEYS } from '@/lib/constants'
 
 interface Message {
   id: string
@@ -7,7 +8,7 @@ interface Message {
   content: string
 }
 
-const STORAGE_KEY = 'react-tips-openrouter-key'
+const STORAGE_KEY = STORAGE_KEYS.apiKey
 
 const SUGGESTIONS = [
   'Quando usar useCallback vs useMemo?',
@@ -130,7 +131,8 @@ export function ChatWidget() {
   useEffect(() => {
     if (open) {
       setHasNew(false)
-      setTimeout(() => inputRef.current?.focus(), 100)
+      const t = setTimeout(() => inputRef.current?.focus(), 100)
+      return () => clearTimeout(t)
     }
   }, [open])
 

@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { STORAGE_KEYS } from '@/lib/constants'
 
-const STORAGE_KEY = 'react-tips-focus'
+const STORAGE_KEY = STORAGE_KEYS.focus
 const EVENT = 'focus-mode-changed'
 
 function applyFocus(next: boolean) {

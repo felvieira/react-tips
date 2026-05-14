@@ -4,18 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useProgress } from '@/hooks/useProgress'
 import { getRelatedTerms } from '@/lib/loaders'
 import type { Concept, GlossaryItem } from '@/lib/schemas'
-
-const DOMAIN_HUES: Record<string, number> = {
-  'Performance': 150, 'React 18': 220, 'Next.js RSC': 190,
-  'Padrão': 280, 'Segurança': 0, 'Hooks': 250,
-  'Next.js': 190, 'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
-  'Básico FE': 60, 'Intermediário FE': 220, 'Avançado FE': 300,
-  'Design System': 30, 'Microfrontend': 160, 'Observabilidade': 50,
-  'Estado Global': 260,
-  'Testing': 150, 'Acessibilidade': 280, 'Carreira': 40,
-  'Arquitetura': 200, 'Corporativo': 35,
-  'IA Básico': 290, 'IA Avançado': 270,
-}
+import { DOMAIN_HUES } from '@/lib/constants'
 
 function highlight(code: string): string {
   // Tokenize into segments to avoid reprocessing spans
@@ -90,7 +79,7 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
   const hue = DOMAIN_HUES[concept.level] ?? 220
 
   // Reset flashcard state when concept changes
-  useState(() => { setRevealed(false) })
+  useEffect(() => { setRevealed(false) }, [concept.id])
 
   // Keyboard navigation
   useEffect(() => {
@@ -229,8 +218,8 @@ function QASection({ questions }: { questions: { q: string; a: string }[] }) {
           {allOpen ? 'fechar todas' : 'expandir todas'}
         </button>
       </div>
-      {questions.map((q, i) => (
-        <QABlock key={i} q={q.q} a={q.a} forceOpen={allOpen} />
+      {questions.map((q) => (
+        <QABlock key={q.q} q={q.q} a={q.a} forceOpen={allOpen} />
       ))}
     </div>
   )
@@ -238,7 +227,11 @@ function QASection({ questions }: { questions: { q: string; a: string }[] }) {
 
 function QABlock({ q, a, forceOpen }: { q: string; a: string; forceOpen?: boolean }) {
   const [open, setOpen] = useState(false)
-  const isOpen = forceOpen ?? open
+  // When forceOpen changes to false, reset local state too
+  useEffect(() => {
+    if (forceOpen === false) setOpen(false)
+  }, [forceOpen])
+  const isOpen = forceOpen === true ? true : open
   return (
     <div className="qa-block" style={{ marginBottom: 8 }}>
       <div className="qa-q" onClick={() => setOpen(o => !o)}>
@@ -268,9 +261,13 @@ function InlineCodeBlock({ code }: { code: string }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Clipboard API unavailable (non-HTTPS or permission denied)
+    }
   }
 
   return (

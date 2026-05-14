@@ -112,7 +112,10 @@ export function GlobalSearch({ concepts, glossary }: GlobalSearchProps) {
   }, [close])
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50)
+    if (open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 50)
+      return () => clearTimeout(t)
+    }
   }, [open])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

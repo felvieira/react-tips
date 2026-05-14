@@ -1,18 +1,17 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { getConcepts } from '@/lib/loaders'
 import { useProgress } from '@/hooks/useProgress'
 import Link from 'next/link'
 
+const ALL_CONCEPTS = getConcepts()
+
 export default function RevisaoPage() {
-  const router = useRouter()
-  const { getStatus, setStatus, store } = useProgress()
+  const { getStatus, setStatus } = useProgress()
   const [idx, setIdx] = useState(0)
   const [revealed, setRevealed] = useState(false)
 
-  const allConcepts = getConcepts()
-  const toReview = allConcepts.filter(c => getStatus(c.id) === 'review')
+  const toReview = ALL_CONCEPTS.filter(c => getStatus(c.id) === 'review')
 
   useEffect(() => { setRevealed(false) }, [idx])
 
@@ -31,7 +30,7 @@ export default function RevisaoPage() {
     )
   }
 
-  const concept = toReview[idx]
+  const concept = toReview[idx] ?? toReview[toReview.length - 1]
 
   return (
     <div className="app-content">
@@ -84,7 +83,11 @@ export default function RevisaoPage() {
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
               <button
-                onClick={() => { setStatus(concept.id, 'know'); setIdx(i => Math.min(i + 1, toReview.length - 1)) }}
+                onClick={() => {
+                  setStatus(concept.id, 'know')
+                  // Clamp idx after status update — toReview will shrink by 1
+                  setIdx(i => Math.min(i, toReview.length - 2))
+                }}
                 style={{ flex: 1, maxWidth: 180, padding: '10px 0', background: 'oklch(0.65 0.14 150 / 0.15)', color: 'oklch(0.55 0.14 150)', border: '1px solid oklch(0.65 0.14 150 / 0.4)', borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
               >
                 ✓ Sei — próximo

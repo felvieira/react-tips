@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { DOMAIN_HUES } from '@/lib/constants'
 
 interface Question {
   conceptId: number
@@ -16,12 +17,6 @@ interface Question {
 interface Props {
   questions: Question[]
   levels: string[]
-}
-
-const DOMAIN_HUES: Record<string, number> = {
-  'Performance': 150, 'React 18': 220, 'Next.js RSC': 190,
-  'Padrão': 280, 'Segurança': 0, 'Hooks': 250,
-  'Next.js': 190, 'Fundamentos': 60, 'DevTools': 200, 'Padrões': 300,
 }
 
 export function QuestionsClient({ questions, levels }: Props) {

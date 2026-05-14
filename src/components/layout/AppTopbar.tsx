@@ -2,11 +2,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useProgress } from '@/hooks/useProgress'
 import { FocusToggle } from './FocusToggle'
-import type { Concept, GlossaryItem } from '@/lib/schemas'
+import type { Concept } from '@/lib/schemas'
 
 interface AppTopbarProps {
   concepts: Concept[]
-  glossary: GlossaryItem[]
 }
 
 export function AppTopbar({ concepts }: AppTopbarProps) {

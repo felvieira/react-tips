@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ProgressBar />
         <ShellClient
-          topbar={<AppTopbar concepts={concepts} glossary={glossary} />}
+          topbar={<AppTopbar concepts={concepts} />}
           sidebar={<AppSidebar concepts={concepts} levels={levels} />}
           search={<GlobalSearch concepts={concepts} glossary={glossary} />}
         >

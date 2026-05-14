@@ -1,5 +1,6 @@
 'use client'
 import { type ReactNode, useState, useEffect } from 'react'
+import { STORAGE_KEYS } from '@/lib/constants'
 
 interface ShellClientProps {
   topbar: ReactNode
@@ -13,7 +14,7 @@ export function ShellClient({ topbar, sidebar, children, search }: ShellClientPr
 
   useEffect(() => {
     // Init
-    setFocused(localStorage.getItem('react-tips-focus') === '1')
+    setFocused(localStorage.getItem(STORAGE_KEYS.focus) === '1')
 
     const handler = (e: Event) => {
       setFocused((e as CustomEvent<boolean>).detail)

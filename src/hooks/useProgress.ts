@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { STORAGE_KEYS } from '@/lib/constants'
 
 export type ProgressStatus = 'unseen' | 'know' | 'review'
 
@@ -7,7 +8,7 @@ interface ProgressStore {
   [conceptId: number]: ProgressStatus
 }
 
-const STORAGE_KEY = 'react-tips-progress'
+const STORAGE_KEY = STORAGE_KEYS.progress
 
 function readStore(): ProgressStore {
   if (typeof window === 'undefined') return {}
@@ -41,11 +42,12 @@ export function useProgress() {
     return store[id] ?? 'unseen'
   }, [store])
 
+  const knowCount = Object.values(store).filter(s => s === 'know').length
+  const reviewCount = Object.values(store).filter(s => s === 'review').length
+
   const stats = {
-    total: 0,
-    know: Object.values(store).filter(s => s === 'know').length,
-    review: Object.values(store).filter(s => s === 'review').length,
-    unseen: 0,
+    know: knowCount,
+    review: reviewCount,
   }
 
   return { store, setStatus, getStatus, stats }
