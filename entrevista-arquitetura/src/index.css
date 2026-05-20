@@ -1,0 +1,12 @@
+/* O grosso do estilo vive dentro de App.jsx (tag <style> injetada pelo
+   componente). Aqui ficam apenas os resets mínimos para o layout 100vh. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0b0e13;
+}

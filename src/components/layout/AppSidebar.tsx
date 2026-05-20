@@ -10,7 +10,7 @@ const DIFFICULTY_ORDER = [
   'Estado Global', 'Design System', 'Testing', 'Acessibilidade', 'Intermediário FE',
   'Performance', 'React 18', 'Next.js', 'Observabilidade', 'Arquitetura',
   'Next.js RSC', 'Avançado FE', 'Avançado', 'Microfrontend', 'Segurança', 'DevTools',
-  'IA Básico', 'IA Avançado',
+  'IA Básico', 'IA Avançado', 'System Design',
 ]
 
 const DIFFICULTY_LABEL: Record<string, string> = {
@@ -24,6 +24,7 @@ const DIFFICULTY_LABEL: Record<string, string> = {
   'IA Básico': 'Sênior', 'IA Avançado': 'Staff',
   'Next.js RSC': 'Staff', 'Avançado FE': 'Staff', 'Avançado': 'Staff',
   'Segurança': 'Staff', 'DevTools': 'Staff', 'Microfrontend': 'Staff',
+  'System Design': 'Sênior',
 }
 
 interface AppSidebarProps {
@@ -136,6 +137,13 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
         <div className="sidebar-section-title">
           <span className="sdot" style={{ background: 'var(--fg-muted)' }} />
           <span>Outros</span>
+        </div>
+        <div
+          className={'sidebar-row' + (pathname === '/arquitetura' ? ' active' : '')}
+          onClick={() => router.push('/arquitetura')}
+        >
+          <span className="status-dot" style={{ background: '#3fb6f0', border: 'none' }} />
+          <span className="sidebar-row-label">Cockpit Entrevista</span>
         </div>
         <div
           className={'sidebar-row' + (pathname === '/revisao' ? ' active' : '')}

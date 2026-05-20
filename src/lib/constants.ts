@@ -32,6 +32,8 @@ export const DOMAIN_HUES: Record<string, number> = {
   // IA
   'IA Básico': 290,
   'IA Avançado': 270,
+  // System Design (entrevista Grupo SBF / Centauro / Nike)
+  'System Design': 200,
 }
 
 // localStorage key names — single source of truth
