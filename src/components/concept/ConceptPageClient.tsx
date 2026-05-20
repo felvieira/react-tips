@@ -5,6 +5,13 @@ import { useProgress } from '@/hooks/useProgress'
 import { getRelatedTerms } from '@/lib/loaders'
 import type { Concept, GlossaryItem } from '@/lib/schemas'
 import { DOMAIN_HUES } from '@/lib/constants'
+import { FlowDiagram, TRACKING_OVERVIEW, CLIENT_LAYER, STREAMING_LAYER } from '@/components/arquitetura/FlowDiagram'
+
+const DIAGRAM_PRESETS: Record<string, React.ComponentProps<typeof FlowDiagram>> = {
+  'tracking-overview': TRACKING_OVERVIEW,
+  'client-layer': CLIENT_LAYER,
+  'streaming-layer': STREAMING_LAYER,
+}
 
 function highlight(code: string): string {
   // Tokenize into segments to avoid reprocessing spans
@@ -140,6 +147,14 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
             <p>{concept.definition}</p>
           </div>
 
+          {/* Optional diagram (System Design concepts) */}
+          {concept.diagram && (
+            <div className="concept-section">
+              <div className="concept-section-label">Diagrama do fluxo</div>
+              <ConceptDiagram preset={concept.diagram} />
+            </div>
+          )}
+
           {/* Problem → Solution */}
           {concept.problem && (
             <div className="concept-section">
@@ -201,6 +216,13 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
       <NavRow prev={prev} next={next} current={current} total={total} />
     </div>
   )
+}
+
+// Wrapper para diagramas Excalidraw-like dentro dos conceitos
+function ConceptDiagram({ preset }: { preset: string }) {
+  const props = DIAGRAM_PRESETS[preset]
+  if (!props) return null
+  return <FlowDiagram {...props} />
 }
 
 function QASection({ questions }: { questions: { q: string; a: string }[] }) {

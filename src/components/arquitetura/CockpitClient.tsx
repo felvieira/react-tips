@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Quote, HelpCircle,
   ListChecks, Key, Gauge, Zap, MousePointerClick
 } from 'lucide-react';
+import { FlowDiagram, TRACKING_OVERVIEW, CLIENT_LAYER, STREAMING_LAYER } from './FlowDiagram';
 
 /* ============================================================
    TRACKING COCKPIT — apoio de System Design para a entrevista
@@ -135,6 +136,31 @@ const LAYERS = [
         talk:['Experimentação','Feature flags'] },
     ]},
 ];
+
+// Mapping component id → conceito no app (/concepts/X)
+// Conceitos de System Design vão de 104 a 111 e 112 a 115 (Shopify)
+const CONCEPT_BY_LAYER: Record<string, number> = {
+  cliente: 105,        // Camada Cliente (Event SDK, dataLayer, sendBeacon)
+  coleta: 106,         // Camada Coleta (Collector, Gateway, LGPD)
+  streaming: 107,      // Streaming (Kafka + Flink)
+  armazenamento: 108,  // Armazenamento (Lake + OLAP + Warehouse)
+  consumo: 104,        // Visão geral (sem conceito específico de consumo)
+  transversal: 109,    // Trade-offs essenciais
+}
+
+// Mapping component-level → conceito (alguns componentes têm conceito próprio)
+const CONCEPT_BY_COMP: Record<string, number> = {
+  storefront: 111,    // VTEX IO & Shopify ThemeExtension
+  sdk: 105,
+  datalayer: 105,
+  batching: 105,
+  cdn: 106, gateway: 106, collector: 106, consent: 106,
+  broker: 107, processor: 107, registry: 107,
+  lake: 108, olap: 108, warehouse: 108,
+  dashboards: 104, bi: 104, ml: 104, abtest: 104,
+  // transversal:
+  cicd: 109, iac: 109, obs: 109, sec: 109, qa: 109,
+}
 
 const TRANSVERSAL = { id:'transversal', name:'Camada Transversal', tag:'vale para todas as etapas', color:'#fb7185',
   comps:[
@@ -469,6 +495,27 @@ function Inspector({ sel }: any) {
           </div>
         </Section>
       )}
+      {/* Link to full concept in app */}
+      {(CONCEPT_BY_COMP[sel.id] ?? CONCEPT_BY_LAYER[sel.layerId]) && (
+        <a
+          href={`/concepts/${CONCEPT_BY_COMP[sel.id] ?? CONCEPT_BY_LAYER[sel.layerId]}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display:'flex', alignItems:'center', gap:8, marginTop:20,
+            padding:'10px 14px', borderRadius:9,
+            background: hex(col, .12), border:`1px solid ${hex(col, .35)}`,
+            color: col, fontSize: 12, fontWeight: 600,
+            fontFamily: "'IBM Plex Sans', sans-serif",
+            textDecoration: 'none', cursor: 'pointer',
+            transition: 'background .15s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = hex(col, .2)}
+          onMouseLeave={(e) => e.currentTarget.style.background = hex(col, .12)}
+        >
+          📖 Ver conceito completo no app →
+        </a>
+      )}
     </div>
   );
 }
@@ -485,9 +532,31 @@ function Section({ label, color, children }: any) {
 }
 
 function MapaView({ sel, setSel }: any) {
+  const [showDiagram, setShowDiagram] = useState(true);
   return (
     <div style={{ display:'flex', gap:16, padding:20, alignItems:'flex-start', flexWrap:'wrap' }}>
       <div style={{ flex:'1 1 620px', display:'flex', flexDirection:'column', gap:14 }}>
+        {/* Toggle diagrama */}
+        <button
+          onClick={() => setShowDiagram((v: boolean) => !v)}
+          className="btn"
+          style={{
+            alignSelf:'flex-start', padding:'5px 11px', borderRadius:8,
+            background:C.panel2, border:`1px solid ${C.border}`, color:C.dim,
+            fontFamily:"'IBM Plex Mono',monospace", fontSize:10.5, fontWeight:600,
+            textTransform:'uppercase', letterSpacing:.5,
+          }}
+        >
+          {showDiagram ? '▾' : '▸'} Diagrama do fluxo
+        </button>
+
+        {/* Diagrama Excalidraw-like */}
+        {showDiagram && (
+          <div className="fu" style={{ background: C.panel2, borderRadius: 13, padding: 12, border: `1px solid ${C.border}` }}>
+            <FlowDiagram {...TRACKING_OVERVIEW} />
+          </div>
+        )}
+
         {LAYERS.map((l,i) => (
           <LayerRow key={l.id} layer={l} idx={i} selId={sel?.id}
             onSelect={(id: string, lay: any) => setSel(findComp(id))}/>
@@ -623,6 +692,26 @@ function JornadaView({ step, setStep }: any) {
                 “{s.say}”
               </div>
             </div>
+
+            {/* Link to full concept */}
+            {(CONCEPT_BY_COMP[s.comp] ?? CONCEPT_BY_LAYER[s.layer]) && (
+              <a
+                href={`/concepts/${CONCEPT_BY_COMP[s.comp] ?? CONCEPT_BY_LAYER[s.layer]}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:12,
+                  padding:'10px 14px', borderRadius:10,
+                  background: C.panel3, border:`1px solid ${C.border}`,
+                  color: C.dim, fontSize: 11.5, fontWeight: 600,
+                  fontFamily: "'IBM Plex Sans', sans-serif",
+                  textDecoration: 'none', cursor: 'pointer', textTransform:'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                📖 Ver conceito completo →
+              </a>
+            )}
           </div>
         </div>
 

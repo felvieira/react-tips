@@ -18,6 +18,9 @@ export const ConceptSchema = z.object({
   tip: z.string(),
   questions: z.array(QuestionSchema),
   code: z.string(),
+  // Optional: id of a built-in FlowDiagram preset to render at the top of the concept
+  // Values: 'tracking-overview' | 'client-layer' | 'streaming-layer'
+  diagram: z.string().optional(),
 })
 
 export const GlossaryItemSchema = z.object({
