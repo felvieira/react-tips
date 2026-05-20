@@ -335,6 +335,22 @@ function TopBar({ mode, setMode }: any) {
         })}
       </div>
 
+      <a
+        href="/arquitetura/print"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn"
+        title="Abrir cola para imprimir"
+        style={{
+          display:'flex', alignItems:'center', gap:6, padding:'7px 12px',
+          background:C.panel3, color:C.dim, border:`1px solid ${C.border}`,
+          borderRadius:9, fontFamily:"'IBM Plex Sans',sans-serif",
+          fontSize:12, fontWeight:600, textDecoration:'none',
+        }}
+      >
+        🖨️ Imprimir cola
+      </a>
+
       <Timer/>
     </div>
   );
@@ -760,10 +776,35 @@ function ColaView() {
 }
 
 /* ---------- APP ---------- */
+const COCKPIT_STATE_KEY = 'react-tips-cockpit-state';
+
 export function CockpitClient() {
   const [mode, setMode] = useState('mapa');
   const [sel, setSel] = useState<any>(null);
   const [step, setStep] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore state on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COCKPIT_STATE_KEY);
+      if (saved) {
+        const s = JSON.parse(saved);
+        if (s.mode) setMode(s.mode);
+        if (s.selId) setSel(findComp(s.selId));
+        if (typeof s.step === 'number') setStep(s.step);
+      }
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  // Persist state on change (after hydration)
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(COCKPIT_STATE_KEY, JSON.stringify({
+      mode, selId: sel?.id ?? null, step,
+    }));
+  }, [hydrated, mode, sel, step]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
