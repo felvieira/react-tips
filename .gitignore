@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude session artifacts (machine-local)
+.auto/
+.bot/
+.swarm/
