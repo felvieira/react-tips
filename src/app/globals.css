@@ -17,17 +17,17 @@
   --gap: 14px;
   --section-pad: 28px;
 
-  --bg: oklch(0.985 0.003 240);
+  --bg: oklch(0.98 0.005 240);
   --bg-elev: oklch(1 0 0);
-  --bg-sunken: oklch(0.965 0.004 240);
-  --fg: oklch(0.22 0.01 240);
-  --fg-muted: oklch(0.5 0.01 240);
-  --fg-subtle: oklch(0.65 0.008 240);
-  --border: oklch(0.9 0.005 240);
-  --border-strong: oklch(0.82 0.008 240);
-  --code-bg: oklch(0.96 0.005 240);
-  --kbd-bg: oklch(0.94 0.005 240);
-  --shadow-sm: 0 1px 0 0 oklch(0.9 0.005 240 / 0.6);
+  --bg-sunken: oklch(0.955 0.006 240);
+  --fg: oklch(0.18 0.012 240);
+  --fg-muted: oklch(0.45 0.015 240);
+  --fg-subtle: oklch(0.62 0.012 240);
+  --border: oklch(0.88 0.008 240);
+  --border-strong: oklch(0.78 0.01 240);
+  --code-bg: oklch(0.955 0.006 240);
+  --kbd-bg: oklch(0.93 0.008 240);
+  --shadow-sm: 0 1px 0 0 oklch(0.85 0.008 240 / 0.7);
   --shadow-md: 0 8px 24px -8px oklch(0.2 0.01 240 / 0.18), 0 2px 4px -2px oklch(0.2 0.01 240 / 0.08);
 }
 
@@ -35,11 +35,11 @@
   --bg: oklch(0.16 0.008 240);
   --bg-elev: oklch(0.20 0.008 240);
   --bg-sunken: oklch(0.13 0.008 240);
-  --fg: oklch(0.94 0.005 240);
-  --fg-muted: oklch(0.68 0.008 240);
-  --fg-subtle: oklch(0.5 0.008 240);
-  --border: oklch(0.28 0.008 240);
-  --border-strong: oklch(0.38 0.008 240);
+  --fg: oklch(0.96 0.005 240);
+  --fg-muted: oklch(0.7 0.008 240);
+  --fg-subtle: oklch(0.52 0.008 240);
+  --border: oklch(0.32 0.01 240);
+  --border-strong: oklch(0.42 0.01 240);
   --code-bg: oklch(0.22 0.008 240);
   --kbd-bg: oklch(0.26 0.008 240);
   --accent: oklch(0.72 0.14 var(--accent-h));
@@ -53,6 +53,42 @@
   --row-pad-x: 12px;
   --gap: 18px;
   --section-pad: 40px;
+}
+
+/* ── Interview mode (overlays current theme) ── */
+html[data-mode="interview"] {
+  --section-pad: 16px;
+  --gap: 8px;
+  --row-pad-y: 4px;
+  font-size: 15px;
+}
+
+html[data-theme="light"][data-mode="interview"] {
+  --fg: oklch(0.12 0.01 240);
+  --fg-muted: oklch(0.35 0.012 240);
+  --fg-subtle: oklch(0.5 0.012 240);
+  --border: oklch(0.78 0.01 240);
+  --border-strong: oklch(0.65 0.012 240);
+  --accent: oklch(0.45 0.18 var(--accent-h));
+  --accent-soft: oklch(0.45 0.18 var(--accent-h) / 0.14);
+}
+
+html[data-theme="dark"][data-mode="interview"] {
+  --fg: oklch(0.98 0.005 240);
+  --fg-muted: oklch(0.75 0.008 240);
+  --fg-subtle: oklch(0.58 0.008 240);
+  --border: oklch(0.4 0.01 240);
+  --border-strong: oklch(0.5 0.012 240);
+  --accent: oklch(0.78 0.16 var(--accent-h));
+  --accent-soft: oklch(0.78 0.16 var(--accent-h) / 0.22);
+}
+
+html[data-mode="interview"] *,
+html[data-mode="interview"] *::before,
+html[data-mode="interview"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.08s !important;
 }
 
 /* ── Animations ── */
@@ -933,5 +969,91 @@ pre.concept-code .cf { color: oklch(0.6 0.16 30); }
 .chat-send:hover { opacity: 0.85; }
 .chat-send:active { transform: scale(0.95); }
 .chat-send:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Interview mode utilities ── */
+.iv-only { display: none; }
+html[data-mode="interview"] .iv-only { display: revert; }
+html[data-mode="interview"] .iv-hide { display: none; }
+
+html[data-mode="interview"] .concept-section-label {
+  font-size: 9.5px;
+  margin-bottom: 4px;
+}
+
+html[data-mode="interview"] .concept-h1 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+html[data-mode="interview"] .concept-lead {
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+html[data-mode="interview"] .concept-actions {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+}
+
+html[data-mode="interview"] .concept-section {
+  margin-bottom: 14px;
+}
+
+html[data-mode="interview"] .app-sidebar {
+  display: none;
+}
+
+html[data-mode="interview"] .app-grid {
+  grid-template-columns: 1fr !important;
+  grid-template-areas:
+    "topbar"
+    "content" !important;
+}
+
+html[data-mode="interview"] .app-content {
+  padding: 16px 20px;
+}
+
+html[data-mode="interview"] .content-inner {
+  max-width: 860px;
+}
+
+/* ── Interview view (2-col compact) ── */
+.iv-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  break-inside: avoid;
+}
+.iv-card-problem {
+  border-left: 3px solid oklch(0.55 0.18 25);
+}
+.iv-card-solution {
+  border-left: 3px solid oklch(0.5 0.15 150);
+}
+.iv-card-tip {
+  background: oklch(0.95 0.05 75 / 0.4);
+  border-color: oklch(0.7 0.1 75);
+}
+html[data-theme="dark"] .iv-card-tip {
+  background: oklch(0.25 0.05 75 / 0.3);
+  border-color: oklch(0.5 0.1 75);
+}
+.iv-label {
+  font-size: 9.5px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+  margin-bottom: 5px;
+}
+.iv-body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg);
+  margin: 0;
+}
 
 } /* end @layer components */

@@ -42,4 +42,5 @@ export const STORAGE_KEYS = {
   focus:    'react-tips-focus',
   apiKey:   'react-tips-openrouter-key',
   theme:    'react-tips-theme',
+  mode:     'react-tips-mode',  // 'study' | 'interview'
 } as const

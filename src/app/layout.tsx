@@ -28,6 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           topbar={<AppTopbar concepts={concepts} />}
           sidebar={<AppSidebar concepts={concepts} levels={levels} />}
           search={<GlobalSearch concepts={concepts} glossary={glossary} />}
+          concepts={concepts}
         >
           {children}
         </ShellClient>

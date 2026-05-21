@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useProgress } from '@/hooks/useProgress'
-import { getRelatedTerms } from '@/lib/loaders'
+import { useMode } from '@/hooks/useMode'
 import type { Concept, GlossaryItem } from '@/lib/schemas'
 import { DOMAIN_HUES } from '@/lib/constants'
 import { FlowDiagram, TRACKING_OVERVIEW, CLIENT_LAYER, STREAMING_LAYER } from '@/components/arquitetura/FlowDiagram'
@@ -80,6 +80,7 @@ interface Props {
 export function ConceptPageClient({ concept, prev, next, current, total, relatedTerms }: Props) {
   const router = useRouter()
   const { getStatus, setStatus } = useProgress()
+  const { isInterview } = useMode()
   const [flashcard, setFlashcard] = useState(false)
   const [revealed, setRevealed] = useState(false)
   const status = getStatus(concept.id)
@@ -98,6 +99,10 @@ export function ConceptPageClient({ concept, prev, next, current, total, related
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [prev, next, router])
+
+  if (isInterview) {
+    return <InterviewView concept={concept} prev={prev} next={next} current={current} total={total} relatedTerms={relatedTerms} />
+  }
 
   return (
     <div key={concept.id} className="content-inner animate-fade-up">
@@ -313,6 +318,211 @@ function InlineCodeBlock({ code }: { code: string }) {
       </pre>
     </div>
   )
+}
+
+function InterviewView({ concept, prev, next, current, total }: Props) {
+  const router = useRouter()
+  const { getStatus, setStatus } = useProgress()
+  const status = getStatus(concept.id)
+  const hue = DOMAIN_HUES[concept.level] ?? 220
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (e.key === 'ArrowRight' && next) router.push(`/concepts/${next}`)
+      if (e.key === 'ArrowLeft' && prev) router.push(`/concepts/${prev}`)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [prev, next, router])
+
+  const keywords = extractKeywords(`${concept.summary} ${concept.tip} ${concept.definition}`)
+
+  return (
+    <div className="iv-container" style={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      maxWidth: 1280, margin: '0 auto', padding: '12px 20px',
+    }}>
+      {/* TOPO FINO */}
+      <div className="iv-header" style={{
+        display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12,
+        paddingBottom: 10, borderBottom: '1px solid var(--border-strong)',
+      }}>
+        <button
+          onClick={() => prev && router.push(`/concepts/${prev}`)}
+          disabled={!prev}
+          style={{
+            width: 34, height: 34, borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-elev)',
+            color: 'var(--fg)', cursor: prev ? 'pointer' : 'default',
+            opacity: prev ? 1 : 0.3, fontSize: 16, lineHeight: 1,
+          }}
+        >←</button>
+        <span style={{
+          fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--fg-muted)',
+          minWidth: 60, textAlign: 'center',
+        }}>{current}/{total}</span>
+        <button
+          onClick={() => next && router.push(`/concepts/${next}`)}
+          disabled={!next}
+          style={{
+            width: 34, height: 34, borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-elev)',
+            color: 'var(--fg)', cursor: next ? 'pointer' : 'default',
+            opacity: next ? 1 : 0.3, fontSize: 16, lineHeight: 1,
+          }}
+        >→</button>
+
+        <span style={{
+          padding: '3px 8px', borderRadius: 4,
+          background: `oklch(0.6 0.15 ${hue} / 0.18)`,
+          color: `oklch(0.45 0.18 ${hue})`,
+          fontSize: 10, fontFamily: 'var(--font-mono)',
+          fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}>{concept.level}</span>
+
+        <h1 style={{
+          flex: 1, fontSize: 18, fontWeight: 700, color: 'var(--fg)',
+          lineHeight: 1.3, margin: 0,
+        }}>{concept.title}</h1>
+
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={() => setStatus(concept.id, status === 'know' ? 'unseen' : 'know')}
+            title="Já sei"
+            style={{
+              padding: '4px 10px', borderRadius: 5,
+              border: `1px solid ${status === 'know' ? 'oklch(0.55 0.16 150)' : 'var(--border)'}`,
+              background: status === 'know' ? 'oklch(0.55 0.16 150 / 0.18)' : 'transparent',
+              color: status === 'know' ? 'oklch(0.45 0.16 150)' : 'var(--fg-muted)',
+              cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-mono)',
+            }}
+          >✓ sei</button>
+          <button
+            onClick={() => setStatus(concept.id, status === 'review' ? 'unseen' : 'review')}
+            title="Revisar"
+            style={{
+              padding: '4px 10px', borderRadius: 5,
+              border: `1px solid ${status === 'review' ? 'oklch(0.7 0.15 60)' : 'var(--border)'}`,
+              background: status === 'review' ? 'oklch(0.7 0.15 60 / 0.18)' : 'transparent',
+              color: status === 'review' ? 'oklch(0.5 0.15 60)' : 'var(--fg-muted)',
+              cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-mono)',
+            }}
+          >⟳ rev</button>
+        </div>
+      </div>
+
+      {keywords.length > 0 && (
+        <div style={{
+          display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10,
+        }}>
+          {keywords.map(kw => (
+            <span key={kw} style={{
+              padding: '2px 7px', borderRadius: 99,
+              background: 'var(--bg-sunken)',
+              border: '1px solid var(--border)',
+              fontFamily: 'var(--font-mono)', fontSize: 10.5,
+              color: 'var(--fg-muted)', fontWeight: 600,
+            }}>
+              {kw}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="iv-grid" style={{
+        flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr',
+        gap: 14, overflow: 'hidden', minHeight: 0,
+      }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 10, overflow: 'auto',
+          paddingRight: 6,
+        }}>
+          <div className="iv-card">
+            <div className="iv-label">Definição</div>
+            <p className="iv-body">{concept.definition}</p>
+          </div>
+
+          {concept.problem && (
+            <div className="iv-card iv-card-problem">
+              <div className="iv-label" style={{ color: 'oklch(0.5 0.18 25)' }}>🔴 Problema</div>
+              <p className="iv-body">{concept.problem}</p>
+            </div>
+          )}
+
+          {concept.solution && (
+            <div className="iv-card iv-card-solution">
+              <div className="iv-label" style={{ color: 'oklch(0.42 0.15 150)' }}>✅ Solução</div>
+              <p className="iv-body">{concept.solution}</p>
+            </div>
+          )}
+
+          {concept.tip && (
+            <div className="iv-card iv-card-tip">
+              <div className="iv-label" style={{ color: 'oklch(0.5 0.16 60)' }}>💡 Dica</div>
+              <p className="iv-body">{concept.tip}</p>
+            </div>
+          )}
+        </div>
+
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 10, overflow: 'auto',
+          paddingRight: 6,
+        }}>
+          {concept.questions && concept.questions.length > 0 && (
+            <div className="iv-card">
+              <div className="iv-label">Perguntas frequentes</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {concept.questions.map((q, i) => (
+                  <div key={i}>
+                    <div style={{
+                      fontSize: 12.5, fontWeight: 700, color: 'var(--fg)', marginBottom: 4,
+                    }}>
+                      <span style={{ color: 'var(--accent)', marginRight: 6 }}>Q.</span>
+                      {q.q}
+                    </div>
+                    <div style={{
+                      fontSize: 12, color: 'var(--fg-muted)', lineHeight: 1.55,
+                      paddingLeft: 18, borderLeft: '2px solid var(--accent-soft)',
+                    }}>{q.a}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {concept.code && (
+            <details className="iv-card">
+              <summary style={{
+                cursor: 'pointer', fontSize: 10.5, fontFamily: 'var(--font-mono)',
+                color: 'var(--fg-muted)', textTransform: 'uppercase',
+                letterSpacing: '0.06em', fontWeight: 700,
+              }}>
+                Código ▾
+              </summary>
+              <pre style={{
+                marginTop: 8, fontSize: 11, fontFamily: 'var(--font-mono)',
+                background: 'var(--code-bg)', padding: 10, borderRadius: 6,
+                overflow: 'auto', lineHeight: 1.5, color: 'var(--fg)',
+                whiteSpace: 'pre',
+              }}>{concept.code}</pre>
+            </details>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function extractKeywords(text: string): string[] {
+  const STOPWORDS = new Set(['para', 'com', 'que', 'uma', 'tem', 'sem', 'mas', 'esta', 'isso', 'pelo', 'pela', 'são', 'dos', 'das', 'mais', 'menos', 'já', 'ser', 'foi', 'sua', 'seu', 'não', 'esse', 'essa', 'aqui', 'onde', 'como', 'quando', 'porque'])
+  const matches = text.match(/[A-Z][a-zA-Z]+|use[A-Z][a-zA-Z]+|[a-z]+(?:[-_][a-z]+)+|[a-z]+\.[a-z]+/g) ?? []
+  const unique = Array.from(new Set(matches.filter(m => m.length > 2 && !STOPWORDS.has(m.toLowerCase())))).slice(0, 8)
+  return unique
 }
 
 function NavRow({ prev, next, current, total }: { prev: number | null; next: number | null; current: number; total: number }) {

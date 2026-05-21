@@ -1,16 +1,21 @@
 'use client'
 import { type ReactNode, useState, useEffect } from 'react'
 import { STORAGE_KEYS } from '@/lib/constants'
+import { useMode } from '@/hooks/useMode'
+import { QuickFindBar } from './QuickFindBar'
+import type { Concept } from '@/lib/schemas'
 
 interface ShellClientProps {
   topbar: ReactNode
   sidebar: ReactNode
   children: ReactNode
   search: ReactNode
+  concepts: Concept[]
 }
 
-export function ShellClient({ topbar, sidebar, children, search }: ShellClientProps) {
+export function ShellClient({ topbar, sidebar, children, search, concepts }: ShellClientProps) {
   const [focused, setFocused] = useState(false)
+  const { isInterview } = useMode()
 
   useEffect(() => {
     // Init
@@ -43,6 +48,7 @@ export function ShellClient({ topbar, sidebar, children, search }: ShellClientPr
         </div>
       </div>
       <main className="app-content">
+        {isInterview && <QuickFindBar concepts={concepts} />}
         {children}
       </main>
       {search}
