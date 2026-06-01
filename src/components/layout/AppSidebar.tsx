@@ -139,6 +139,13 @@ export function AppSidebar({ concepts, levels }: AppSidebarProps) {
           <span>Outros</span>
         </div>
         <div
+          className={'sidebar-row' + (pathname === '/arquitetura/uber' ? ' active' : '')}
+          onClick={() => router.push('/arquitetura/uber')}
+        >
+          <span className="status-dot" style={{ background: '#fb923c', borderColor: 'transparent' }} />
+          <span className="sidebar-row-label">Cockpit Uber/FAANG</span>
+        </div>
+        <div
           className={'sidebar-row' + (pathname === '/arquitetura' ? ' active' : '')}
           onClick={() => router.push('/arquitetura')}
         >
