@@ -1,5 +1,11 @@
+import type { Metadata } from 'next'
 import { getConcepts } from '@/lib/loaders'
 import { QuestionsClient } from '@/components/questions/QuestionsClient'
+
+export const metadata: Metadata = {
+  title: 'Perguntas de Entrevista',
+  description: '144+ perguntas de entrevista React, Next.js e TypeScript organizadas por tópico.',
+}
 
 export default function QuestionsPage() {
   const concepts = getConcepts()

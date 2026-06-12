@@ -1,4 +1,10 @@
+import type { Metadata } from 'next'
 import { getGlossary } from '@/lib/loaders'
+
+export const metadata: Metadata = {
+  title: 'Glossário',
+  description: 'Glossário completo de termos React, Next.js e frontend para entrevistas técnicas.',
+}
 
 export default function GlossaryPage() {
   const items = getGlossary()

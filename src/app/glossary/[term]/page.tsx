@@ -1,5 +1,20 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getGlossary, getGlossaryByTerm } from '@/lib/loaders'
+
+export async function generateMetadata({ params }: { params: Promise<{ term: string }> }): Promise<Metadata> {
+  const { term } = await params
+  const item = getGlossaryByTerm(decodeURIComponent(term))
+  if (!item) return {}
+  return {
+    title: item.term,
+    description: item.def ? item.def.slice(0, 155) : `Definição de ${item.term} para entrevistas React.`,
+    openGraph: {
+      title: `${item.term} · Glossário React`,
+      description: item.def ? item.def.slice(0, 155) : `Definição de ${item.term}.`,
+    },
+  }
+}
 
 export function generateStaticParams() {
   return getGlossary().map(g => ({ term: encodeURIComponent(g.term) }))

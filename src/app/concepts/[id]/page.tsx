@@ -1,6 +1,21 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { getConcepts, getConceptById, getRelatedTerms } from '@/lib/loaders'
 import { ConceptPageClient } from '@/components/concept/ConceptPageClient'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id: idStr } = await params
+  const concept = getConceptById(Number(idStr))
+  if (!concept) return {}
+  return {
+    title: concept.title,
+    description: concept.summary ?? `Aprenda ${concept.title} para entrevistas React Senior/Staff.`,
+    openGraph: {
+      title: `${concept.title} · React Interview Deck`,
+      description: concept.summary ?? `Aprenda ${concept.title} para entrevistas.`,
+    },
+  }
+}
 
 export function generateStaticParams() {
   return getConcepts().map(c => ({ id: String(c.id) }))
