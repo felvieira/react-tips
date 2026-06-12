@@ -83,8 +83,13 @@ export async function POST(req: NextRequest) {
   })
 
   if (!response.ok) {
-    const err = await response.text()
-    return new Response(JSON.stringify({ error: err }), { status: response.status })
+    const status = response.status
+    const msg =
+      status === 429 ? 'Limite de requisições atingido. Tente novamente em breve.' :
+      status === 401 ? 'Chave de API inválida ou expirada.' :
+      status === 402 ? 'Créditos insuficientes na conta OpenRouter.' :
+      'Erro no serviço. Tente novamente.'
+    return new Response(JSON.stringify({ error: msg }), { status })
   }
 
   // Stream the response directly

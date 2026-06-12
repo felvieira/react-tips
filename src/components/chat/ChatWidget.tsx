@@ -20,8 +20,10 @@ const SUGGESTIONS = [
 function parseMarkdown(text: string): string {
   return text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
-      `<pre><code class="lang-${lang}">${code.trim()}</code></pre>`)
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      const safeLang = lang.replace(/[^a-zA-Z0-9-]/g, '')
+      return `<pre><code class="lang-${safeLang}">${code.trim()}</code></pre>`
+    })
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/^### (.+)$/gm, '<strong>$1</strong>')
@@ -342,7 +344,7 @@ export function ChatWidget() {
                               className="chat-bubble"
                               dangerouslySetInnerHTML={{
                                 __html: parseMarkdown(msg.content) ||
-                                  (loading && msg.role === 'assistant' && !msg.content ? '&nbsp;' : msg.content)
+                                  (loading && msg.role === 'assistant' && !msg.content ? '&nbsp;' : '')
                               }}
                             />
                           </div>
